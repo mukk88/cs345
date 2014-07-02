@@ -34,6 +34,7 @@ extern jmp_buf reset_context;
 
 
 #define NUM_COMMANDS 52
+#define MAX_COMMAND_LEN 64
 typedef struct								// command struct
 {
 	char* command;
@@ -88,7 +89,6 @@ int P1_shellTask(int argc, char* argv[])
 
 		SEM_WAIT(inBufferReady);			// wait for input buffer semaphore
 		if (!inBuffer[0]) continue;		// ignore blank lines
-		// printf("%s", inBuffer);
 
 		SWAP										// do context switch
 
@@ -97,32 +97,54 @@ int P1_shellTask(int argc, char* argv[])
 			// ?? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 			// ?? parse command line into argc, argv[] variables
 			// ?? must use malloc for argv storage!
-			static char *sp, *tempArgv[MAX_ARGS];
+			static char *sp;
 			static  char **myArgv;
-
+			int i;
 
 			// init arguments
 			newArgc = 0;
-			tempArgv[0] = sp = inBuffer;				// point to input string
-			for (i=1; i<MAX_ARGS; i++){
-				tempArgv[i] = 0;
-			}
+			sp = inBuffer;				// point to input string
 
-			char * token = strtok (sp," ");
-			while (token != NULL)
-			{
-				// printf ("%s",token);
-				tempArgv[newArgc++] = token;
-				token = strtok (NULL, " ");
+			char arguments[MAX_ARGS][MAX_COMMAND_LEN];
+
+			int len = strlen(sp);
+			char arg[MAX_COMMAND_LEN];
+			int curpos = 0;
+			int inQuotes = 0;
+			for(i=0;i<len+1;i++){
+				if(inBuffer[i] == 0x22){
+					if(inQuotes){
+						inQuotes=0;
+						arguments[newArgc][curpos] = 0;
+						newArgc++;
+						curpos = 0;
+					}else{
+						inQuotes=1;
+					}
+					continue;
+				};
+				if(inQuotes){
+					arguments[newArgc][curpos++] = inBuffer[i];
+				}else{
+					if(inBuffer[i]==' ' || inBuffer[i] == '\0'){
+						if(curpos!=0){
+							arguments[newArgc][curpos] = 0;
+							newArgc++;
+							curpos = 0;
+						}
+					}else{
+						arguments[newArgc][curpos++] = tolower(inBuffer[i]);
+					}
+				}
 			}
 
 			newArgv = malloc(sizeof(char*) * newArgc);
-			int i;
 			for(i =0; i<newArgc;i++){
-				int len = strlen(tempArgv[i]);
+				int len = strlen(arguments[i]);
 				newArgv[i] = malloc((len + 1) * sizeof(char));
-				strcpy(newArgv[i], tempArgv[i]);
+				strcpy(newArgv[i], arguments[i]);
 			}
+
 		}	// ?? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 		SWAP

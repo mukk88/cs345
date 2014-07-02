@@ -113,24 +113,23 @@ static void keyboard_isr()
 			case 8:
 			case 0x7f:
 			{
-				if(inBufIndx < 0){
-					
+				if(inBufIndx > 0){
+					printf("\b \b");
+					inBuffer[--inBufIndx]="";	
+					inBuffer[inBufIndx] = 0;
 				}
-				printf("\b \b");
-				inBuffer[--inBufIndx]="";	
-				inBuffer[inBufIndx] = 0;
 				break;
 			}
 
 			// up key
-			case 0x41:
-			{
-				// for some reason it removes my first character
-				// the a is a random. character to solve that problem
-				printf("a");
-				printf("%s", inBuffer);
-				break;
-			}
+			// case 0x41:
+			// {
+			// 	// for some reason it removes my first character
+			// 	// the a is a random. character to solve that problem
+			// 	printf("a");
+			// 	printf("%s", inBuffer);
+			// 	break;
+			// }
 
 			case 0x12:						//  ^r
 			{
