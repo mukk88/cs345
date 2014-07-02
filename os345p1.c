@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include <setjmp.h>
 #include <assert.h>
+#include <time.h>
 #include "os345.h"
 #include "os345signals.h"
 
@@ -32,7 +33,7 @@ extern jmp_buf reset_context;
 // -----
 
 
-#define NUM_COMMANDS 49
+#define NUM_COMMANDS 52
 typedef struct								// command struct
 {
 	char* command;
@@ -99,7 +100,6 @@ int P1_shellTask(int argc, char* argv[])
 			static char *sp, *tempArgv[MAX_ARGS];
 			static  char **myArgv;
 
-			// printf("\n%s\n", inBuffer);
 
 			// init arguments
 			newArgc = 0;
@@ -122,18 +122,8 @@ int P1_shellTask(int argc, char* argv[])
 				int len = strlen(tempArgv[i]);
 				newArgv[i] = malloc((len + 1) * sizeof(char));
 				strcpy(newArgv[i], tempArgv[i]);
-
-				// int j;
-			 //    for(j = 0; j <= len; j++){
-			 //    	strcpy(newArgv[i][j], tempArgv[i][j]);
-			 //        // newArgv[i][j] = tempArgv[i][j];
-			 //    }
 			}
-
-			// newArgv = tempArgv;
 		}	// ?? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-		// printf("argc = %d", newArgc);
 
 		SWAP
 
@@ -248,6 +238,34 @@ int P1_help(int argc, char* argv[])
 	return 0;
 } // end P1_help
 
+// add command
+int P1_add(int argc, char* argv[]){
+	int num,i;
+	for(i=0,num=0;i<argc;i++){
+		num+=atoi(argv[i]);
+	}
+	printf("\n%d", num);
+	return 0;
+}
+
+int P1_args(int argc, char* argv[]){
+	int i;
+	printf("\n");
+	for(i=0;i<argc;i++){
+		printf("%s ", argv[i]);
+	}
+	return 0;
+}
+
+int P1_datetime(int argc, char* argv[]){
+	time_t current_time;
+    char* c_time_string;
+    current_time = time(NULL);
+    c_time_string = ctime(&current_time);
+    printf("\nCurrent time is %s", c_time_string);
+	return 0;
+}
+
 
 // ***********************************************************************
 // ***********************************************************************
@@ -290,6 +308,9 @@ Command** P1_init()
 	commands[i++] = newCommand("project1", "p1", P1_project1, "P1: Shell");
 	commands[i++] = newCommand("help", "he", P1_help, "OS345 Help");
 	commands[i++] = newCommand("lc3", "lc3", P1_lc3, "Execute LC3 program");
+	commands[i++] = newCommand("add", "add", P1_add, "Add some numbers together");
+	commands[i++] = newCommand("arguments", "args", P1_args, "Prints out the arguments");
+	commands[i++] = newCommand("datetime", "time", P1_datetime, "Prints out the current date and time");
 
 	// P2: Tasking
 	commands[i++] = newCommand("project2", "p2", P2_project2, "P2: Tasking");

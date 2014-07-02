@@ -113,6 +113,9 @@ static void keyboard_isr()
 			case 8:
 			case 0x7f:
 			{
+				if(inBufIndx < 0){
+					
+				}
 				printf("\b \b");
 				inBuffer[--inBufIndx]="";	
 				inBuffer[inBufIndx] = 0;

@@ -36,12 +36,32 @@ extern int curTask;							// current task #
 //
 int signals(void)
 {
+	//dispatcher calls this
+
 	if (tcb[curTask].signal)
 	{
 		if (tcb[curTask].signal & mySIGINT)
 		{
 			tcb[curTask].signal &= ~mySIGINT;
 			(*tcb[curTask].sigIntHandler)();
+		}
+		if (tcb[curTask].signal & mySIGCONT)
+		{
+			tcb[curTask].signal &= ~mySIGCONT;
+			(*tcb[curTask].sigContHandler)();
+			// ?? schedule task
+		}
+		if (tcb[curTask].signal & mySIGTERM)
+		{
+			tcb[curTask].signal &= ~mySIGTERM;
+			(*tcb[curTask].sigTermHandler)();
+			return 1;
+		}
+		if (tcb[curTask].signal & mySIGTSTP)
+		{
+			tcb[curTask].signal &= ~mySIGTSTP;
+			(*tcb[curTask].sigTstpHandler)();
+			return 1;
 		}
 	}
 	return 0;
@@ -100,6 +120,7 @@ int sigSignal(int taskId, int sig)
 void defaultSigIntHandler(void)			// task mySIGINT handler
 {
 	printf("\ndefaultSigIntHandler");
+	sigSignal(-1, mySIGTERM);
 	return;
 }
 
@@ -111,19 +132,22 @@ void defaultSigContHandler(void)
 
 void defaultSigKillHandler(void)
 {
-	printf("\ndefaultsigkillhandler");
+	printf("\nthis does nothing");
 	return;
 }
 
 void defaultSigTermHandler(void)
 {
 	printf("\ndefaultsigtermhandler");
+	//kill task
+	killTask(curTask);
 	return;
 }
 
 void defaultSigTstpHandler(void)
 {
 	printf("\ndefaultsigtstphandler");
+	sigSignal(-1, mySIGSTOP);
 	return;
 }
 
@@ -136,7 +160,7 @@ void createTaskSigHandlers(int tid)
 		// inherit parent signal handlers
 		tcb[tid].sigIntHandler = tcb[curTask].sigIntHandler;			// mySIGINT handler
 		tcb[tid].sigContHandler = tcb[curTask].sigContHandler;			// mySIGCONT handler
-		tcb[tid].sigKillHandler = tcb[curTask].sigKillHandler;			// mySIGKILL handler
+		tcb[tid].sigKillHandler = tcb[curTask].sigKillHandler;			// mySIGKILL handler not needed
 		tcb[tid].sigTermHandler = tcb[curTask].sigTermHandler;			// mySIGTERM handler
 		tcb[tid].sigTstpHandler = tcb[curTask].sigTstpHandler;			// mySIGTSTP handler
 	}
@@ -145,7 +169,7 @@ void createTaskSigHandlers(int tid)
 		// otherwise use defaults
 		tcb[tid].sigIntHandler = defaultSigIntHandler;			// task mySIGINT handler
 		tcb[tid].sigContHandler = defaultSigContHandler;			// task mySIGCONT handler
-		tcb[tid].sigKillHandler = defaultSigKillHandler;			// task mySIGKILL handler
+		tcb[tid].sigKillHandler = defaultSigKillHandler;			// task mySIGKILL handler not needed
 		tcb[tid].sigTermHandler = defaultSigTermHandler;			// task mySIGTERM handler
 		tcb[tid].sigTstpHandler = defaultSigTstpHandler;			// task mySIGTSTP handler
 	}
