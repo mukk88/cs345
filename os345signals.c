@@ -103,6 +103,12 @@ void defaultSigIntHandler(void)			// task mySIGINT handler
 	return;
 }
 
+void defaultSigContHandler(void)
+{
+	printf("\ndefaultsigkillhandler");
+	return;
+}
+
 
 void createTaskSigHandlers(int tid)
 {

@@ -48,6 +48,8 @@ int createTask(char* name,						// task name
 {
 	int tid;
 
+	printf("%d getting here", argc);
+
 	// find an open tcb entry slot
 	for (tid = 0; tid < MAX_TASKS; tid++)
 	{

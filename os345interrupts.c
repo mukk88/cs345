@@ -90,6 +90,8 @@ void pollInterrupts(void)
 //
 static void keyboard_isr()
 {
+	// store the last 10 input commands only
+	char history[10][INBUF_SIZE+1];
 	// assert system mode
 	assert("keyboard_isr Error" && superMode);
 
@@ -101,6 +103,7 @@ static void keyboard_isr()
 			case '\r':
 			case '\n':
 			{
+				// history[0] = inBuffer;
 				inBufIndx = 0;				// EOL, signal line ready
 				semSignal(inBufferReady);	// SIGNAL(inBufferReady)
 				break;
@@ -114,6 +117,18 @@ static void keyboard_isr()
 				inBuffer[inBufIndx] = 0;
 				break;
 			}
+
+			// up key
+			case 65:
+			{
+				// for some reason it removes my first character
+				// the a is a random. character to solve that problem
+				printf("a");
+				printf("%s", inBuffer);
+				break;
+			}
+
+			case 
 
 			case 0x18:						// ^x
 			{

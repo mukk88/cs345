@@ -116,25 +116,26 @@ int P1_shellTask(int argc, char* argv[])
 				token = strtok (NULL, " ");
 			}
 
-			myArgv = malloc(sizeof(char*) * newArgc);
+			newArgv = malloc(sizeof(char*) * newArgc);
 			int i;
 			for(i =0; i<newArgc;i++){
 				int len = strlen(tempArgv[i]);
-				myArgv[i] = malloc((len + 1) * sizeof(char));
+				newArgv[i] = malloc((len + 1) * sizeof(char));
+				strcpy(newArgv[i], tempArgv[i]);
 
-				int j;
-			    for(j = 0; j <= len; j++){
-			        myArgv[i][j] = tempArgv[i][j];
-			    }
+				// int j;
+			 //    for(j = 0; j <= len; j++){
+			 //    	strcpy(newArgv[i][j], tempArgv[i][j]);
+			 //        // newArgv[i][j] = tempArgv[i][j];
+			 //    }
 			}
 
-			newArgv = tempArgv;
-
-
-
+			// newArgv = tempArgv;
 		}	// ?? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 		printf("argc = %d", newArgc);
+
+		SWAP
 
 		// look for command
 		for (found = i = 0; i < NUM_COMMANDS; i++)
@@ -142,6 +143,12 @@ int P1_shellTask(int argc, char* argv[])
 			if (!strcmp(newArgv[0], commands[i]->command) ||
 				 !strcmp(newArgv[0], commands[i]->shortcut))
 			{
+				//check for &
+				if(0){
+
+				}else{
+
+				}
 				// command found
 				int retValue = (*commands[i]->func)(newArgc, newArgv);
 				if (retValue) printf("\nCommand Error %d", retValue);
@@ -153,10 +160,10 @@ int P1_shellTask(int argc, char* argv[])
 
 		// ?? free up any malloc'd argv parameters
 
-		// for(i=0;i<newArgc;i++){
-		// 	free(newArgv[i]);
-		// } 
-		// free(newArgv);
+		for(i=0;i<newArgc;i++){
+			free(newArgv[i]);
+		} 
+		free(newArgv);
 
 		for (i=0; i<INBUF_SIZE; i++) inBuffer[i] = 0;
 	}
