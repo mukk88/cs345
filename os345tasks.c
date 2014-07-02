@@ -48,8 +48,6 @@ int createTask(char* name,						// task name
 {
 	int tid;
 
-	printf("%d getting here", argc);
-
 	// find an open tcb entry slot
 	for (tid = 0; tid < MAX_TASKS; tid++)
 	{
@@ -75,7 +73,18 @@ int createTask(char* name,						// task name
 			tcb[tid].argc = argc;			// argument count
 
 			// ?? malloc new argv parameters
-			tcb[tid].argv = argv;			// argument pointers
+
+			char** newargv;
+			newargv = malloc(sizeof(char*) * argc);
+			int i;
+			for(i=0;i<argc;i++){
+				int len = strlen(argv[i]);
+				newargv[i] = malloc((len+1) * sizeof(char));
+				strcpy(newargv[i], argv[i]);
+			} 
+
+			tcb[tid].argv = newargv;			// argument pointers
+			tcb[tid].argc = argc;
 
 			tcb[tid].event = 0;				// suspend semaphore
 			tcb[tid].RPT = 0;					// root page table (project 5)
@@ -176,6 +185,14 @@ int sysKillTask(int taskId)
 	}
 
 	// ?? delete task from system queues
+
+	int taskargc;
+	taskargc = tcb[taskId].argc;
+	int i;
+	for(i=0;i<taskargc;i++){
+		free(tcb[taskId].argv[i]);
+	} 
+	free(tcb[taskId].argv);
 
 	tcb[taskId].name = 0;			// release tcb slot
 	return 0;

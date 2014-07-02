@@ -98,6 +98,7 @@ static void keyboard_isr()
 	semSignal(charReady);					// SIGNAL(charReady) (No Swap)
 	if (charFlag == 0)
 	{
+		// printf("%x\n", inChar);
 		switch (inChar)
 		{
 			case '\r':
@@ -110,7 +111,7 @@ static void keyboard_isr()
 			}
 
 			case 8:
-			case 127:
+			case 0x7f:
 			{
 				printf("\b \b");
 				inBuffer[--inBufIndx]="";	
@@ -119,7 +120,7 @@ static void keyboard_isr()
 			}
 
 			// up key
-			case 65:
+			case 0x41:
 			{
 				// for some reason it removes my first character
 				// the a is a random. character to solve that problem
@@ -128,7 +129,26 @@ static void keyboard_isr()
 				break;
 			}
 
-			case 
+			case 0x12:						//  ^r
+			{
+				inBufIndx = 0;
+				inBuffer[0] = 0;
+				sigSignal(-1, mySIGCONT);
+				clearAllSigStpStop();	
+				printf("ctrl r");
+				semSignal(inBufferReady);	// SIGNAL(inBufferReady)
+				break;
+			}
+
+			case 0x17: 						//  ^w
+			{
+				inBufIndx = 0;
+				inBuffer[0] = 0;
+				sigSignal(-1, mySIGTSTP);
+				printf("ctrl w");
+				semSignal(inBufferReady);	// SIGNAL(inBufferReady)
+				break;
+			}
 
 			case 0x18:						// ^x
 			{

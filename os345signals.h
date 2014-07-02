@@ -20,6 +20,7 @@ int sigSignal(int taskId, int sig);
 int sigAction(void (*sigHandler)(void), int sig);
 void defaultSigIntHandler(void);
 void createTaskSigHandlers(int tid);
+void clearAllSigStpStop();
 
 int signals(void);
 

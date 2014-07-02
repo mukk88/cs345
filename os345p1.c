@@ -99,7 +99,7 @@ int P1_shellTask(int argc, char* argv[])
 			static char *sp, *tempArgv[MAX_ARGS];
 			static  char **myArgv;
 
-			printf("\n%s\n", inBuffer);
+			// printf("\n%s\n", inBuffer);
 
 			// init arguments
 			newArgc = 0;
@@ -133,7 +133,7 @@ int P1_shellTask(int argc, char* argv[])
 			// newArgv = tempArgv;
 		}	// ?? >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-		printf("argc = %d", newArgc);
+		// printf("argc = %d", newArgc);
 
 		SWAP
 
@@ -144,16 +144,17 @@ int P1_shellTask(int argc, char* argv[])
 				 !strcmp(newArgv[0], commands[i]->shortcut))
 			{
 				//check for &
-				if(0){
-
+				if(strcmp(newArgv[newArgc-1],"&") == 0){
+					createTask(commands[i]->command, commands[i]->func, 5, newArgc, newArgv);	
+					found = TRUE;
+					break;
 				}else{
-
+					// command found
+					int retValue = (*commands[i]->func)(newArgc, newArgv);
+					if (retValue) printf("\nCommand Error %d", retValue);
+					found = TRUE;
+					break;
 				}
-				// command found
-				int retValue = (*commands[i]->func)(newArgc, newArgv);
-				if (retValue) printf("\nCommand Error %d", retValue);
-				found = TRUE;
-				break;
 			}
 		}
 		if (!found)	printf("\nInvalid command!");
@@ -228,12 +229,20 @@ int P1_help(int argc, char* argv[])
 {
 	int i;
 
-	// list commands
-	for (i = 0; i < NUM_COMMANDS; i++)
-	{
-		SWAP										// do context switch
-		if (strstr(commands[i]->description, ":")) printf("\n");
-		printf("\n%4s: %s", commands[i]->shortcut, commands[i]->description);
+	if(!strcmp(argv[argc-1], "&")){
+		argc--;
+	}
+
+	if(argc > 1){
+		printf("\nthis is the help for %s", argv[1]);
+	}else{
+		// list commands
+		for (i = 0; i < NUM_COMMANDS; i++)
+		{
+			SWAP										// do context switch
+			if (strstr(commands[i]->description, ":")) printf("\n");
+			printf("\n%4s: %s", commands[i]->shortcut, commands[i]->description);
+		}
 	}
 
 	return 0;
