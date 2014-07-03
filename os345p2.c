@@ -54,12 +54,9 @@ typedef struct
 void swap(PQueue* tasks, int i)
 {
 	Entry temp;
-	temp.tid = tasks->queue[i].entry.tid;
-	temp.priority = tasks->queue[i].entry.priority;
-	tasks->queue[i].entry.tid = tasks->queue[i-1].entry.tid;
-	tasks->queue[i].entry.priority = tasks->queue[i-1].entry.priority;
-	tasks->queue[i-1].entry.tid = temp.tid;
-	tasks->queue[i-1].entry.priority = temp.priority;
+	temp = tasks->queue[i].entry;
+	tasks->queue[i].entry = tasks->queue[i-1].entry;
+	tasks->queue[i-1].entry = temp;
 }
 
 int enQueue(PQueue* tasks, TID tid, int priority)
