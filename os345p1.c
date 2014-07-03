@@ -262,9 +262,14 @@ int P1_help(int argc, char* argv[])
 
 // add command
 int P1_add(int argc, char* argv[]){
-	int num,i;
-	for(i=0,num=0;i<argc;i++){
-		num+=atoi(argv[i]);
+	int num,i, hexnum;
+	for(i=1,num=0;i<argc;i++){
+		if(argv[i][0] == '0' && argv[i][1] == 'x'){
+			sscanf(argv[i], "%x", &hexnum);
+			num+=hexnum;
+		}else{
+			num+=atoi(argv[i]);
+		}
 	}
 	printf("\n%d", num);
 	return 0;
@@ -274,7 +279,7 @@ int P1_args(int argc, char* argv[]){
 	int i;
 	printf("\n");
 	for(i=0;i<argc;i++){
-		printf("%s ", argv[i]);
+		printf("%s\n", argv[i]);
 	}
 	return 0;
 }

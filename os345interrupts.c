@@ -88,10 +88,15 @@ void pollInterrupts(void)
 // **********************************************************************
 // keyboard interrupt service routine
 //
+
+#define MAX_HISTORY 10
+int upindex = 0, counter = 0;
+
 static void keyboard_isr()
 {
 	// store the last 10 input commands only
-	char history[10][INBUF_SIZE+1];
+	int i;
+	char history[MAX_HISTORY][INBUF_SIZE+1];
 	// assert system mode
 	assert("keyboard_isr Error" && superMode);
 
@@ -104,7 +109,16 @@ static void keyboard_isr()
 			case '\r':
 			case '\n':
 			{
-				// history[0] = inBuffer;
+				if (inBuffer[0]){
+					for(i=9;i>0;i--){
+						strcpy(history[i], history[i-1]);
+					}
+					strcpy(history[0],inBuffer);	
+					if(counter<MAX_HISTORY){
+						counter++;
+					}				
+				}
+				upindex = 0;
 				inBufIndx = 0;				// EOL, signal line ready
 				semSignal(inBufferReady);	// SIGNAL(inBufferReady)
 				break;
@@ -121,15 +135,44 @@ static void keyboard_isr()
 				break;
 			}
 
-			// up key
-			// case 0x41:
-			// {
-			// 	// for some reason it removes my first character
-			// 	// the a is a random. character to solve that problem
-			// 	printf("a");
-			// 	printf("%s", inBuffer);
-			// 	break;
-			// }
+			case 0x1b:				// control keys
+			{
+				char control;
+				control = GET_CHAR;
+				control = GET_CHAR;
+				switch(control)
+				{
+					case 0x41:		// up
+					{
+						if(upindex < counter){
+							printf("\r                         \r%s", history[upindex++]);
+							inBufIndx = strlen(history[upindex-1]);
+							strcpy(inBuffer,history[upindex-1]);
+						}
+						break;
+					}
+					case 0x42:		// down
+					{
+						if(upindex > 0){
+							upindex--;
+							printf("\r                         \r%s", history[upindex-1]);
+							inBufIndx = strlen(history[upindex-1]);
+							strcpy(inBuffer,history[upindex-1]);
+						}
+						if(upindex == 0){
+							printf("\r                           \r");
+							inBufIndx = 0;
+							inBuffer[inBufIndx] = 0;
+							// strcpy(inBuffer,history[upindex-1]);
+						}
+					}
+					default:
+					{
+						break;
+					}
+				}
+				break;
+			}
 
 			case 0x12:						//  ^r
 			{
