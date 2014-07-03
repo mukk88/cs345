@@ -37,6 +37,76 @@ extern int curTask;							// current task #
 extern Semaphore* semaphoreList;			// linked list of active semaphores
 extern jmp_buf reset_context;				// context of kernel stack
 
+typedef struct
+{
+	TID tid;
+	int priority;
+} Entry;
+
+typedef struct
+{	int size;
+	union
+	{	int element;
+		Entry entry;
+	} queue[100];
+} PQueue;
+
+void swap(PQueue* tasks, int i)
+{
+	Entry temp;
+	temp.tid = tasks->queue[i].entry.tid;
+	temp.priority = tasks->queue[i].entry.priority;
+	tasks->queue[i].entry.tid = tasks->queue[i-1].entry.tid;
+	tasks->queue[i].entry.priority = tasks->queue[i-1].entry.priority;
+	tasks->queue[i-1].entry.tid = temp.tid;
+	tasks->queue[i-1].entry.priority = temp.priority;
+}
+
+int enQueue(PQueue* tasks, TID tid, int priority)
+{
+	Entry e;
+	e.tid = tid;
+	e.priority = priority;
+	tasks->queue[tasks->size++].entry = e;
+	int i;
+	for(i=tasks->size-1;i>0;i--){
+		if(tasks->queue[i].entry.priority <= tasks->queue[i-1].entry.priority){
+			swap(tasks,i);
+		}else{
+			break;
+		}
+	}
+	return 0;
+}
+
+int removeTask(PQueue* tasks, int index)
+{
+	int i;
+	for(i=index+1;i<tasks->size;i++){
+		swap(tasks,i);
+	}
+	tasks->size--;
+	return tasks->queue[tasks->size].entry.tid;
+}
+
+int deQueue(PQueue* tasks, TID tid)
+{
+	int i;
+	if(tasks->size < 1){
+		return -1;
+	}
+	if(tid < 0){
+		tasks->size--;
+		return tasks->queue[tasks->size].entry.tid;
+	}else{
+		for(i=0;i<tasks->size;i++){
+			if(tasks->queue[i].entry.tid == tid){
+				return removeTask(tasks, i);
+			}
+		}
+	}
+	return -1;
+}
 // ***********************************************************************
 // project 2 functions and tasks
 
@@ -53,6 +123,35 @@ int P2_project2(int argc, char* argv[])
 	static char* aliveArgv[] = {"I'm Alive", "3"};
 
 	printf("\nStarting Project 2");
+
+	// int i;
+	// PQueue running_tasks;
+	// running_tasks.size = 0;
+	// enQueue(&running_tasks, 2,3);
+	// enQueue(&running_tasks, 1,4);
+	// enQueue(&running_tasks, 3,1);
+
+	// // for(i=0;i<7;i++)
+	// 	printf("\n%d", deQueue(&running_tasks,2));
+	// 	printf("\n%d", deQueue(&running_tasks,3));
+	// 	printf("\n%d", deQueue(&running_tasks,7));
+
+	// enQueue(&running_tasks, 4,2);
+	// enQueue(&running_tasks, 5,7);
+	// enQueue(&running_tasks, 6,11);
+
+	// 	printf("\n%d", deQueue(&running_tasks,6));
+
+	// enQueue(&running_tasks, 6,11);
+	// enQueue(&running_tasks, 8,10);
+
+	
+	// printf("\nqueue size %d", running_tasks.size);
+	// for(i=running_tasks.size-1;i>=0;i--)
+	// 	printf("\n%d %d", running_tasks.queue[i].entry.priority, running_tasks.queue[i].entry.tid);
+
+	
+
 	SWAP;
 
 	// start tasks looking for sTask semaphores
@@ -81,7 +180,6 @@ int P2_project2(int argc, char* argv[])
 					aliveArgv);				// task argument pointers
 	return 0;
 } // end P2_project2
-
 
 
 // ***********************************************************************
