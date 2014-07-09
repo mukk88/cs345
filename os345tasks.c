@@ -36,6 +36,9 @@ extern int superMode;						// system mode
 extern Semaphore* semaphoreList;			// linked list of active semaphores
 extern Semaphore* taskSems[MAX_TASKS];		// task semaphore
 
+PQueue* readyQueue;
+// readyQueue->size = 0;
+// initQueue(readyQueue);
 
 // **********************************************************************
 // **********************************************************************

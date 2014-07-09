@@ -83,8 +83,72 @@ bool diskMounted;					// disk has been mounted
 time_t oldTime1;					// old 1sec time
 clock_t myClkTime;
 clock_t myOldClkTime;
-int* rq;							// ready priority queue
+// int* rq;							// ready priority queue
+PQueue* readyQueue;
 
+void swap(PQueue* tasks, int i)
+{
+	Entry* temp;
+	memcpy(&temp, tasks->queue[i], sizeof(Entry*));
+	memcpy(tasks->queue[i], tasks->queue[i-1], sizeof(Entry*));
+	memcpy(tasks->queue[i-1], &temp, sizeof(Entry*));
+}
+
+int enQueue(PQueue* tasks, TID tid, int priority)
+{
+	Entry e;
+	e.tid = tid;
+	e.priority = priority;
+	memcpy(tasks->queue[tasks->size++], &e, sizeof(Entry*));
+	int i;
+	for(i=tasks->size-1;i>0;i--){
+		if(tasks->queue[i]->priority <= tasks->queue[i-1]->priority){
+			swap(tasks,i);
+		}else{
+			break;
+		}
+	}
+	return 0;
+}
+
+int removeTask(PQueue* tasks, int index)
+{
+	int i;
+	for(i=index+1;i<tasks->size;i++){
+		swap(tasks,i);
+	}
+	tasks->size--;
+	return tasks->queue[tasks->size]->tid;
+}
+
+int deQueue(PQueue* tasks, TID tid)
+{
+	int i;
+	if(tasks->size < 1){
+		return -1;
+	}
+	if(tid < 0){
+		tasks->size--;
+		return tasks->queue[tasks->size]->tid;
+	}else{
+		for(i=0;i<tasks->size;i++){
+			if(tasks->queue[i]->tid == tid){
+				return removeTask(tasks, i);
+			}
+		}
+	}
+	return -1;
+}
+
+void initQueue(PQueue* tasks)
+{
+	int i;
+	// tasks->queue = malloc(sizeof(Entry*) * 10);
+	// for(i=0;i<100;i++){
+	// 	tasks->queue[i] = malloc(sizeof(Entry));
+	// }
+	// tasks->size = 0;
+}
 
 // **********************************************************************
 // **********************************************************************
@@ -350,8 +414,10 @@ static int initOS()
 	diskMounted = 0;					// disk has been mounted
 
 	// malloc ready queue
-	rq = (int*)malloc(MAX_TASKS * sizeof(int));
-	if (rq == NULL) return 99;
+	// rq = (int*)malloc(MAX_TASKS * sizeof(int));
+	// if (rq == NULL) return 99;
+
+	initQueue(readyQueue);
 
 	// capture current time
 	lastPollClock = clock();			// last pollClock
@@ -400,7 +466,7 @@ void powerDown(int code)
 		deleteSemaphore(&semaphoreList);
 
 	// free ready queue
-	free(rq);
+	// free(rq);
 
 	// ?? release any other system resources
 	// ?? deltaclock (project 3)

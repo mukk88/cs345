@@ -114,6 +114,24 @@ typedef struct
    int to;                    // destination
    char* msg;						// msg
 } Message;
+
+typedef struct
+{
+	TID tid;
+	int priority;
+} Entry;
+
+typedef struct
+{	int size;
+	Entry** queue;
+} PQueue;
+
+void swap(PQueue* tasks, int i);
+int enQueue(PQueue* tasks, TID tid, int priority);
+int removeTask(PQueue* tasks, int index);
+int deQueue(PQueue* tasks, TID tid);
+void initQueue(PQueue* tasks);
+
 #define MAX_MESSAGE_SIZE		64
 
 // ***********************************************************************
