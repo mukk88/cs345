@@ -37,11 +37,14 @@ extern int curTask;							// current task #
 extern Semaphore* semaphoreList;			// linked list of active semaphores
 extern jmp_buf reset_context;				// context of kernel stack
 
+extern Semaphore* tics10sec;
+
 // ***********************************************************************
 // project 2 functions and tasks
 
 int signalTask(int, char**);
 int ImAliveTask(int, char**);
+int tenSecTask(int, char**);
 
 // ***********************************************************************
 // ***********************************************************************
@@ -51,6 +54,7 @@ int P2_project2(int argc, char* argv[])
 	static char* s1Argv[] = {"signal1", "s1Sem"};
 	static char* s2Argv[] = {"signal2", "s2Sem"};
 	static char* aliveArgv[] = {"I'm Alive", "3"};
+	static char* tenArgv[] = {"ten second", "10"};
 
 	printf("\nStarting Project 2");
 
@@ -82,6 +86,18 @@ int P2_project2(int argc, char* argv[])
 
 
 	SWAP;
+
+	createTask("10secTask",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
+
+	createTask("10secTask",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
 
 	// start tasks looking for sTask semaphores
 	createTask("signal1",				// task name
@@ -285,7 +301,17 @@ int ImAliveTask(int argc, char* argv[])
 	return 0;						// terminate task
 } // end ImAliveTask
 
-
+int tenSecTask(int argc, char* argv[])
+{
+	char svtime[64];						// ascii current time
+	while(1)
+	{
+		SEM_WAIT(tics10sec);
+		printf("\nTime = %s", myTime(svtime));
+		swapTask();
+	}
+	return 0;
+}
 
 // **********************************************************************
 // **********************************************************************

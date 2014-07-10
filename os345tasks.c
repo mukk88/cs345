@@ -197,8 +197,7 @@ int sysKillTask(int taskId)
 		free(tcb[taskId].argv[i]);
 	} 
 	free(tcb[taskId].argv);
-
-	deQueue(&readyQueue, taskId);
+	// deQueue(&readyQueue, taskId);
 
 	tcb[taskId].name = 0;			// release tcb slot
 	return 0;

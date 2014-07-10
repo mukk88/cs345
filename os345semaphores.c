@@ -33,6 +33,7 @@ extern int curTask;							// current task #
 extern int superMode;						// system mode
 extern Semaphore* semaphoreList;			// linked list of active semaphores
 
+extern PQueue readyQueue;
 
 // **********************************************************************
 // **********************************************************************
@@ -53,7 +54,7 @@ void semSignal(Semaphore* s)
 		// binary semaphore
 		// look through tasks for one suspended on this semaphore
 
-temp:	// ?? temporary label
+// temp:	// ?? temporary label
 		for (i=0; i<MAX_TASKS; i++)	// look for suspended task
 		{
 			if (tcb[i].event == s)
@@ -63,6 +64,8 @@ temp:	// ?? temporary label
 				tcb[i].state = S_READY;	// unblock task
 
 				// ?? move task from blocked to ready queue
+				deQueue(&s->q, i);
+				enQueue(&readyQueue,i,tcb[i].priority);
 
 				if (!superMode) swapTask();
 				return;
@@ -78,7 +81,26 @@ temp:	// ?? temporary label
 		// counting semaphore
 		// ?? implement counting semaphore
 
-		goto temp;
+		if(++s->state <= 0 ){
+			for(i=0;i<MAX_TASKS;i++)
+			{
+				if(tcb[i].event==s)
+				{
+					s->state = 0;
+					tcb[i].event = 0;
+					tcb[i].state = S_READY;	// unblock task
+
+					deQueue(&s->q, i);
+					enQueue(&readyQueue,i,tcb[i].priority);
+
+					if(!superMode) swapTask();
+					return;
+				}
+			}
+		}
+		if(!superMode) swapTask();
+		return;
+		// goto temp;
 	}
 } // end semSignal
 
@@ -103,13 +125,15 @@ int semWait(Semaphore* s)
 		// binary semaphore
 		// if state is zero, then block task
 
-temp:	// ?? temporary label
+// temp:	// ?? temporary label
 		if (s->state == 0)
 		{
 			tcb[curTask].event = s;		// block task
 			tcb[curTask].state = S_BLOCKED;
 
 			// ?? move task from ready queue to blocked queue
+			int blockedTask = deQueue(&readyQueue, curTask);
+			enQueue(&s->q, blockedTask, tcb[blockedTask].priority);
 
 			swapTask();						// reschedule the tasks
 			return 1;
@@ -122,8 +146,18 @@ temp:	// ?? temporary label
 	{
 		// counting semaphore
 		// ?? implement counting semaphore
+		if(--s->state < 0){
+			tcb[curTask].event = s;
+			tcb[curTask].state = S_BLOCKED;
 
-		goto temp;
+			int blockedTask = deQueue(&readyQueue, curTask);
+			enQueue(&s->q, blockedTask, tcb[blockedTask].priority);
+
+			swapTask();
+			return 1;
+		}		
+		return 0;
+		// goto temp;
 	}
 } // end semWait
 
@@ -148,7 +182,7 @@ int semTryLock(Semaphore* s)
 		// binary semaphore
 		// if state is zero, then block task
 
-temp:	// ?? temporary label
+// temp:	// ?? temporary label
 		if (s->state == 0)
 		{
 			return 0;
@@ -162,7 +196,13 @@ temp:	// ?? temporary label
 		// counting semaphore
 		// ?? implement counting semaphore
 
-		goto temp;
+		if(--s->state < 0)
+		{
+			return 0;
+		}
+		return 1;
+
+		// goto temp;
 	}
 } // end semTryLock
 
@@ -206,6 +246,8 @@ Semaphore* createSemaphore(char* name, int type, int state)
 	// allocate memory for new semaphore
 	sem = (Semaphore*)malloc(sizeof(Semaphore));
 
+	initQueue(&sem->q);
+
 	// set semaphore values
 	sem->name = (char*)malloc(strlen(name)+1);
 	strcpy(sem->name, name);				// semaphore name
@@ -245,6 +287,7 @@ bool deleteSemaphore(Semaphore** semaphore)
 			printf("\ndeleteSemaphore(%s)", sem->name);
 
 			// ?? free all semaphore memory
+			// free(&sem->q);
 			free(sem->name);
 			free(sem);
 

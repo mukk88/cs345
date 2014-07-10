@@ -70,6 +70,17 @@
 typedef int bool;						// boolean value
 typedef int TID;						// task id
 
+typedef struct
+{
+	TID tid;
+	int priority;
+} Entry;
+
+typedef struct
+{	int size;
+	Entry** queue;
+} PQueue;
+
 // semaphore
 typedef struct semaphore			// semaphore
 {
@@ -78,6 +89,7 @@ typedef struct semaphore			// semaphore
 	int state;							// semaphore state
 	int type;							// semaphore type
 	int taskNum;						// semaphore creator task #
+	PQueue q;
 } Semaphore;
 
 // task control block
@@ -115,16 +127,6 @@ typedef struct
    char* msg;						// msg
 } Message;
 
-typedef struct
-{
-	TID tid;
-	int priority;
-} Entry;
-
-typedef struct
-{	int size;
-	Entry** queue;
-} PQueue;
 
 void swap(PQueue tasks, int i);
 int enQueue(PQueue* tasks, TID tid, int priority);
