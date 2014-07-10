@@ -100,13 +100,6 @@ int enQueue(PQueue* tasks, TID tid, int priority)
 	e.tid = tid;
 	e.priority = priority;
 	memcpy(tasks->queue[(tasks->size)++], &e, sizeof(Entry*));
-
-	// memcpy(&tasks->queue[tasks->size]->tid, &tid, sizeof(int));
-	// tasks->queue[tasks->size]->priority = priority;
-
-	// tasks->size++;
-
-
 	int i;
 	for(i=tasks->size-1;i>0;i--){
 		if(tasks->queue[i]->priority <= tasks->queue[i-1]->priority){
@@ -153,13 +146,11 @@ int deQueue(PQueue* tasks, TID tid)
 void initQueue(PQueue* tasks)
 {
 	int i;
-	tasks->queue = (Entry**)malloc(sizeof(Entry*) * 10);
+	tasks->queue = (Entry**)malloc(sizeof(Entry*) * 100);
 	for(i=0;i<100;i++){
 		tasks->queue[i] = (Entry*)malloc(sizeof(Entry));
 	}
 	tasks->size = 0;
-	// printf("%d\n", tasks->queue[0]->tid);
-	tasks->queue[0]->tid = 1;
 }
 
 void freeQueue(PQueue* tasks)
@@ -280,24 +271,9 @@ static int scheduler()
 
 	// schedule next task
 
-	nextTask = ++curTask;
-
-
-
-	// mask sure nextTask is valid
-	while (!tcb[nextTask].name)
-	{
-		// if(nextTask > 0){
-		// 	int i;
-		// 	for(i=readyQueue.size-1;i>=0;i--){
-		// 		printf("\ntid!!!! = %d prio = %d", readyQueue.queue[i]->tid, readyQueue.queue[i]->priority);
-		// 	}
-		// }
-		nextTask = deQueue(&readyQueue,-1);
-		if(nextTask >= 0){
-			enQueue(&readyQueue, nextTask, tcb[nextTask].priority);
-		}
-		if (++nextTask >= MAX_TASKS) nextTask = 0;
+	nextTask = deQueue(&readyQueue,-1);
+	if(nextTask >= 0){
+		enQueue(&readyQueue, nextTask, tcb[nextTask].priority);
 	}
 	if (tcb[nextTask].signal & mySIGSTOP) return -1;
 

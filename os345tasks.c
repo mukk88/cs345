@@ -102,10 +102,6 @@ int createTask(char* name,						// task name
 			// ?? may require inserting task into "ready" queue
 			enQueue(&readyQueue, tid, priority);
 
-			for(i=readyQueue.size-1;i>=0;i--){
-				printf("\ntid!!!! = %d prio = %d", readyQueue.queue[i]->tid, readyQueue.queue[i]->priority);
-			}
-
 			if (tid) swapTask();				// do context switch (if not cli)
 			return tid;							// return tcb index (curTask)
 		}

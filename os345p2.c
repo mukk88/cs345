@@ -55,32 +55,26 @@ int P2_project2(int argc, char* argv[])
 	printf("\nStarting Project 2");
 
 
-	PQueue test;
-	int i;
-	initQueue(&test);
-	enQueue(&test, 2,5);
-	enQueue(&test, 1,4);
-	enQueue(&test, 4,10);
-	enQueue(&test, 3,3);
+	// PQueue test;
+	// int i;
+	// initQueue(&test);
+	// enQueue(&test, 2,5);
+	// enQueue(&test, 1,4);
+	// enQueue(&test, 4,10);
+	// enQueue(&test, 3,3);
 
 	// for(i=test.size-1;i>=0;i--){
 	// 	printf("\ntid!!!! = %d", test.queue[i]->tid);
 	// 	printf("\n%d taken out", deQueue(&test,-1));
 	// }
 
-	int nextTask = deQueue(&test,-1);
+	// int nextTask = deQueue(&test,-1);
 
 	// while(nextTask>=0){
 	// 	printf("\n%d", nextTask);
 	// 	nextTask = deQueue(&test,-1);
 		
 	// }
-
-
-
-
-
-
 
 
 
