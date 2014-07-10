@@ -54,35 +54,38 @@ int P2_project2(int argc, char* argv[])
 
 	printf("\nStarting Project 2");
 
-	// int i;
-	// PQueue* running_tasks;
 
-	// initQueue(running_tasks);
+	PQueue test;
+	int i;
+	initQueue(&test);
+	enQueue(&test, 2,5);
+	enQueue(&test, 1,4);
+	enQueue(&test, 4,10);
+	enQueue(&test, 3,3);
 
-	// enQueue(running_tasks, 2,3);
-	// enQueue(running_tasks, 1,4);
-	// enQueue(running_tasks, 3,1);
+	// for(i=test.size-1;i>=0;i--){
+	// 	printf("\ntid!!!! = %d", test.queue[i]->tid);
+	// 	printf("\n%d taken out", deQueue(&test,-1));
+	// }
 
-	// // // for(i=0;i<7;i++)
-	// 	printf("\n%d", deQueue(running_tasks,2));
-	// 	printf("\n%d", deQueue(running_tasks,3));
-	// 	printf("\n%d", deQueue(running_tasks,7));
+	int nextTask = deQueue(&test,-1);
 
-	// enQueue(running_tasks, 4,2);
-	// enQueue(running_tasks, 5,7);
-	// enQueue(running_tasks, 6,11);
+	// while(nextTask>=0){
+	// 	printf("\n%d", nextTask);
+	// 	nextTask = deQueue(&test,-1);
+		
+	// }
 
-	// 	printf("\n%d", deQueue(running_tasks,6));
 
-	// enQueue(running_tasks, 6,11);
-	// enQueue(running_tasks, 8,10);
 
-	
-	// printf("\nqueue size %d", running_tasks->size);
-	// for(i=(running_tasks->size)-1;i>=0;i--)
-	// 	printf("\n%d %d", running_tasks->queue[i]->priority, running_tasks->queue[i]->tid);
 
-	
+
+
+
+
+
+
+
 
 	SWAP;
 

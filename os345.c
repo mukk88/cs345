@@ -84,14 +84,14 @@ time_t oldTime1;					// old 1sec time
 clock_t myClkTime;
 clock_t myOldClkTime;
 // int* rq;							// ready priority queue
-PQueue* readyQueue;
+PQueue readyQueue;
 
-void swap(PQueue* tasks, int i)
+void swap(PQueue tasks, int i)
 {
 	Entry* temp;
-	memcpy(&temp, tasks->queue[i], sizeof(Entry*));
-	memcpy(tasks->queue[i], tasks->queue[i-1], sizeof(Entry*));
-	memcpy(tasks->queue[i-1], &temp, sizeof(Entry*));
+	memcpy(&temp, tasks.queue[i], sizeof(Entry*));
+	memcpy(tasks.queue[i], tasks.queue[i-1], sizeof(Entry*));
+	memcpy(tasks.queue[i-1], &temp, sizeof(Entry*));
 }
 
 int enQueue(PQueue* tasks, TID tid, int priority)
@@ -99,11 +99,18 @@ int enQueue(PQueue* tasks, TID tid, int priority)
 	Entry e;
 	e.tid = tid;
 	e.priority = priority;
-	memcpy(tasks->queue[tasks->size++], &e, sizeof(Entry*));
+	memcpy(tasks->queue[(tasks->size)++], &e, sizeof(Entry*));
+
+	// memcpy(&tasks->queue[tasks->size]->tid, &tid, sizeof(int));
+	// tasks->queue[tasks->size]->priority = priority;
+
+	// tasks->size++;
+
+
 	int i;
 	for(i=tasks->size-1;i>0;i--){
 		if(tasks->queue[i]->priority <= tasks->queue[i-1]->priority){
-			swap(tasks,i);
+			swap(*tasks,i);
 		}else{
 			break;
 		}
@@ -111,29 +118,32 @@ int enQueue(PQueue* tasks, TID tid, int priority)
 	return 0;
 }
 
-int removeTask(PQueue* tasks, int index)
+int removeTask(PQueue tasks, int index)
 {
 	int i;
-	for(i=index+1;i<tasks->size;i++){
+	for(i=index+1;i<tasks.size;i++){
 		swap(tasks,i);
 	}
-	tasks->size--;
-	return tasks->queue[tasks->size]->tid;
+	tasks.size--;
+	printf("\n%d", tasks.size);
+	return tasks.queue[tasks.size]->tid;
 }
 
 int deQueue(PQueue* tasks, TID tid)
 {
 	int i;
+	int temp;
 	if(tasks->size < 1){
 		return -1;
 	}
+
 	if(tid < 0){
-		tasks->size--;
+		(tasks->size)--;
 		return tasks->queue[tasks->size]->tid;
 	}else{
 		for(i=0;i<tasks->size;i++){
 			if(tasks->queue[i]->tid == tid){
-				return removeTask(tasks, i);
+				return removeTask(*tasks, i);
 			}
 		}
 	}
@@ -143,13 +153,23 @@ int deQueue(PQueue* tasks, TID tid)
 void initQueue(PQueue* tasks)
 {
 	int i;
-	// tasks->queue = malloc(sizeof(Entry*) * 10);
-	// for(i=0;i<100;i++){
-	// 	tasks->queue[i] = malloc(sizeof(Entry));
-	// }
-	// tasks->size = 0;
+	tasks->queue = (Entry**)malloc(sizeof(Entry*) * 10);
+	for(i=0;i<100;i++){
+		tasks->queue[i] = (Entry*)malloc(sizeof(Entry));
+	}
+	tasks->size = 0;
+	// printf("%d\n", tasks->queue[0]->tid);
+	tasks->queue[0]->tid = 1;
 }
 
+void freeQueue(PQueue* tasks)
+{
+	int i;
+	for(i=0;i<100;i++){
+		free(tasks->queue[i]);
+	}
+	free(tasks->queue);
+}
 // **********************************************************************
 // **********************************************************************
 // OS startup
@@ -259,11 +279,24 @@ static int scheduler()
 	// ?? priorities, clean up dead tasks, and handle semaphores appropriately.
 
 	// schedule next task
+
 	nextTask = ++curTask;
+
+
 
 	// mask sure nextTask is valid
 	while (!tcb[nextTask].name)
 	{
+		// if(nextTask > 0){
+		// 	int i;
+		// 	for(i=readyQueue.size-1;i>=0;i--){
+		// 		printf("\ntid!!!! = %d prio = %d", readyQueue.queue[i]->tid, readyQueue.queue[i]->priority);
+		// 	}
+		// }
+		nextTask = deQueue(&readyQueue,-1);
+		if(nextTask >= 0){
+			enQueue(&readyQueue, nextTask, tcb[nextTask].priority);
+		}
 		if (++nextTask >= MAX_TASKS) nextTask = 0;
 	}
 	if (tcb[nextTask].signal & mySIGSTOP) return -1;
@@ -417,7 +450,11 @@ static int initOS()
 	// rq = (int*)malloc(MAX_TASKS * sizeof(int));
 	// if (rq == NULL) return 99;
 
-	initQueue(readyQueue);
+	initQueue(&readyQueue);
+	// enQueue(&readyQueue,2,2);
+	// int check;
+	// check = deQueue(&readyQueue,-1);
+	// printf("\ni deqed a %d", check);
 
 	// capture current time
 	lastPollClock = clock();			// last pollClock
@@ -467,6 +504,7 @@ void powerDown(int code)
 
 	// free ready queue
 	// free(rq);
+	freeQueue(&readyQueue);
 
 	// ?? release any other system resources
 	// ?? deltaclock (project 3)

@@ -36,9 +36,7 @@ extern int superMode;						// system mode
 extern Semaphore* semaphoreList;			// linked list of active semaphores
 extern Semaphore* taskSems[MAX_TASKS];		// task semaphore
 
-PQueue* readyQueue;
-// readyQueue->size = 0;
-// initQueue(readyQueue);
+extern PQueue readyQueue;
 
 // **********************************************************************
 // **********************************************************************
@@ -50,6 +48,8 @@ int createTask(char* name,						// task name
 					char* argv[])				// task argument pointers
 {
 	int tid;
+
+	printf("\ncreating task with name:%s", name);
 
 	// find an open tcb entry slot
 	for (tid = 0; tid < MAX_TASKS; tid++)
@@ -100,6 +100,11 @@ int createTask(char* name,						// task name
 			tcb[tid].stack = malloc(STACK_SIZE * sizeof(int));
 
 			// ?? may require inserting task into "ready" queue
+			enQueue(&readyQueue, tid, priority);
+
+			for(i=readyQueue.size-1;i>=0;i--){
+				printf("\ntid!!!! = %d prio = %d", readyQueue.queue[i]->tid, readyQueue.queue[i]->priority);
+			}
 
 			if (tid) swapTask();				// do context switch (if not cli)
 			return tid;							// return tcb index (curTask)
@@ -196,6 +201,8 @@ int sysKillTask(int taskId)
 		free(tcb[taskId].argv[i]);
 	} 
 	free(tcb[taskId].argv);
+
+	deQueue(&readyQueue, taskId);
 
 	tcb[taskId].name = 0;			// release tcb slot
 	return 0;

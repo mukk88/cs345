@@ -126,11 +126,12 @@ typedef struct
 	Entry** queue;
 } PQueue;
 
-void swap(PQueue* tasks, int i);
+void swap(PQueue tasks, int i);
 int enQueue(PQueue* tasks, TID tid, int priority);
-int removeTask(PQueue* tasks, int index);
+int removeTask(PQueue tasks, int index);
 int deQueue(PQueue* tasks, TID tid);
 void initQueue(PQueue* tasks);
+void freeQueue(PQueue* tasks);
 
 #define MAX_MESSAGE_SIZE		64
 
