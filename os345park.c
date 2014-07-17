@@ -235,7 +235,6 @@ int carTask(int argc, char* argv[])
 	{
 		for(i=0;i<NUM_SEATS;i++)
 		{
-			SEM_WAIT(carLine)
 			SEM_WAIT(fillSeat[carID]); // waiting for empty seat
 
 			//giving back ticket
@@ -244,8 +243,12 @@ int carTask(int argc, char* argv[])
 			SEM_SIGNAL(parkMutex)
 			SEM_SIGNAL(tickets);
 
+			SEM_SIGNAL(getPassenger)
+			SEM_WAIT(seatTaken)
 
 			rideDone[i] = globalPassenger;
+
+			SEM_SIGNAL(passengerSeated)
 			if(myPark.cars[carID].passengers == NUM_SEATS-1)
 			{
 				SEM_SIGNAL(needDriver);
@@ -311,6 +314,15 @@ int visitorTask(int arc, char* argv[])
 	SEM_SIGNAL(parkMutex)
 
 	//wait for a while before getting into car line?
+
+	SEM_WAIT(getPassenger)
+	globalPassenger = visitorSem;
+	SEM_SIGNAL(seatTaken)
+	SEM_WAIT(passengerSeated)
+
+	SEM_WAIT(visitorSem)
+
+	printf("\n%s", "getting here");
 
 	// SEM_SIGNAL(carLine);
 
