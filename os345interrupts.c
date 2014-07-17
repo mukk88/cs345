@@ -122,6 +122,7 @@ static void keyboard_isr()
 				}
 				upindex = 0;
 				inBufIndx = 0;				// EOL, signal line ready
+				// printf("%s\n", "unblocking");
 				semSignal(inBufferReady);	// SIGNAL(inBufferReady)
 				break;
 			}

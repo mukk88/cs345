@@ -49,8 +49,6 @@ int createTask(char* name,						// task name
 {
 	int tid;
 
-	printf("\ncreating task with name:%s", name);
-
 	// find an open tcb entry slot
 	for (tid = 0; tid < MAX_TASKS; tid++)
 	{
@@ -197,7 +195,7 @@ int sysKillTask(int taskId)
 		free(tcb[taskId].argv[i]);
 	} 
 	free(tcb[taskId].argv);
-	// deQueue(&readyQueue, taskId);
+	deQueue(&readyQueue, taskId);
 
 	tcb[taskId].name = 0;			// release tcb slot
 	return 0;

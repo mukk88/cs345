@@ -88,6 +88,7 @@ int P1_shellTask(int argc, char* argv[])
 		else printf("\n%ld>>", swapCount);
 
 		SEM_WAIT(inBufferReady);			// wait for input buffer semaphore
+		// printf("Shell unblocked from inBufferReady");
 		if (!inBuffer[0]) continue;		// ignore blank lines
 
 		SWAP										// do context switch

@@ -31,6 +31,21 @@ Semaphore* fillSeat[NUM_CARS];			// (signal) seat ready to fill
 Semaphore* seatFilled[NUM_CARS];			// (wait) passenger seated
 Semaphore* rideOver[NUM_CARS];			// (signal) ride over
 
+Semaphore* globalPassenger;
+Semaphore* globalDriver;
+Semaphore* needDriver;
+Semaphore* wakeDriver;
+Semaphore* driverReady;
+
+Semaphore* carReady;
+
+Semaphore* tickets;
+Semaphore* needTicket;
+Semaphore* takeTicket;
+
+Semaphore* inMuseum;
+Semaphore* carLine;
+
 extern TCB tcb[];							// task control block
 extern int curTask;
 extern Semaphore* tics1sec;				// 1 second semaphore
@@ -64,7 +79,7 @@ int jurassicTask(int argc, char* argv[])
 	}
 
 	// initialize other park variables
-	myPark.numOutsidePark = 0;						SWAP;			// # trying to enter park
+	myPark.numOutsidePark = 12;						SWAP;			// # trying to enter park
 	myPark.numTicketsAvailable = MAX_TICKETS;		SWAP;			// T=#
 	myPark.numInPark = 0;							SWAP;			// P=#
 	myPark.numRidesTaken = 0;						SWAP;			// S=#
@@ -78,8 +93,19 @@ int jurassicTask(int argc, char* argv[])
 	myPark.numInGiftShop = 0;						SWAP;			// # in gift shop
 	myPark.numExitedPark = 0;						SWAP;			// # exited park
 
-	// create move care signal semaphore
+	// create move cars signal semaphore
 	moveCars = createSemaphore("moveCar", BINARY, 0);		SWAP;
+	needDriver = createSemaphore("needDriver", COUNTING, 0);
+	wakeDriver = createSemaphore("wakeDriver", COUNTING, 0);
+	driverReady = createSemaphore("driverReady", BINARY, 0);
+	carReady = createSemaphore("carReady", COUNTING, NUM_CARS);
+	tickets = createSemaphore("tickets", COUNTING, MAX_TICKETS);
+	needTicket = createSemaphore("needTicket", COUNTING, 0);
+	takeTicket = createSemaphore("takeTicket", BINARY, 0);
+
+	inMuseum = createSemaphore("inMuseum", COUNTING, MAX_IN_MUSEUM);
+	carLine = createSemaphore("carLine", COUNTING, 0);
+
 
 	// initialize communication semaphores
 	for (i=0; i < NUM_CARS; i++)
@@ -198,6 +224,140 @@ int jurassicTask(int argc, char* argv[])
 	return 0;
 } // end
 
+int carTask(int argc, char* argv[])
+{
+	printf("\n%s", "starting car task");
+	int i, carID;
+	carID  = atoi(argv[0]);
+	Semaphore* rideDone[NUM_SEATS];
+	Semaphore* driverDone;
+	while(1)
+	{
+		for(i=0;i<NUM_SEATS;i++)
+		{
+			SEM_WAIT(carLine)
+			SEM_WAIT(fillSeat[carID]); // waiting for empty seat
+
+			//giving back ticket
+			SEM_WAIT(parkMutex)
+			myPark.numTicketsAvailable++;
+			SEM_SIGNAL(parkMutex)
+			SEM_SIGNAL(tickets);
+
+
+			rideDone[i] = globalPassenger;
+			if(myPark.cars[carID].passengers == NUM_SEATS-1)
+			{
+				SEM_SIGNAL(needDriver);
+				SEM_SIGNAL(wakeDriver);
+				SEM_WAIT(driverReady);
+				driverDone = globalDriver;
+				//going to be full after this, get driver first
+			}
+			myPark.cars[carID].passengers++;
+			SEM_SIGNAL(seatFilled[carID]);
+		}
+		SEM_WAIT(rideOver[carID]);
+
+		SEM_SIGNAL(driverDone);
+		for(i=0;i<NUM_SEATS;i++)
+		{
+			SEM_SIGNAL(rideDone[i]);
+		}
+	}
+	return 0;
+}
+
+int visitorTask(int arc, char* argv[])
+{
+	//assume that they have got to the front of the line, only create 5
+	char buf[32];
+	Semaphore* visitorSem;
+	int visitorID = atoi(argv[0]);
+	sprintf(buf, "visitorSem%d", visitorID);
+	visitorSem = createSemaphore(buf, BINARY, 0);
+
+	SEM_WAIT(parkMutex);
+	myPark.numOutsidePark--;
+	myPark.numInPark++;
+	myPark.numInTicketLine++;
+	SEM_SIGNAL(parkMutex);
+
+	SEM_SIGNAL(needTicket);
+	SEM_SIGNAL(wakeDriver);
+	SEM_WAIT(takeTicket);
+
+	SEM_WAIT(parkMutex)
+	myPark.numInTicketLine--;
+	myPark.numInMuseumLine++;
+	SEM_SIGNAL(parkMutex)
+
+	//wait for a random amount of time in line before asking for musuem
+
+	SEM_WAIT(inMuseum)
+
+	SEM_WAIT(parkMutex)
+	myPark.numInMuseumLine--;
+	myPark.numInMuseum++;
+	SEM_SIGNAL(parkMutex)
+
+	//wait for a random time in musuem
+
+	SEM_SIGNAL(inMuseum) // out of musuem
+
+	SEM_WAIT(parkMutex)
+	myPark.numInMuseum--;
+	myPark.numInCarLine++;
+	SEM_SIGNAL(parkMutex)
+
+	//wait for a while before getting into car line?
+
+	// SEM_SIGNAL(carLine);
+
+	// SEM_SIGNAL(fillSeat[0]);
+
+
+
+	// should be done when finish ride
+	// SEM_SIGNAL(tickets);
+}
+
+int driverTask(int argc, char* argv[])
+{
+	char buf[32];
+	Semaphore* driverDone;
+	int driverID = atoi(argv[0]);
+	printf("Starting driver task with id = %d", driverID);
+	sprintf(buf, "driverDone%d", driverID);
+	driverDone = createSemaphore(buf, BINARY, 0);
+
+	while(1)
+	{
+		SEM_WAIT(wakeDriver);
+		if(semTryLock(needDriver))
+		{
+			globalDriver = driverDone;
+			SEM_SIGNAL(driverReady);
+			SEM_WAIT(carReady)
+			SEM_WAIT(driverDone)
+		}
+		else if(semTryLock(needTicket))
+		{
+			SEM_WAIT(tickets)
+
+			SEM_WAIT(parkMutex)
+			myPark.numTicketsAvailable--;
+			SEM_SIGNAL(parkMutex)
+
+			SEM_SIGNAL(takeTicket)
+		}
+		else
+		{
+			break;
+		}
+	}
+	return 0;
+}
 
 
 //***********************************************************************
@@ -263,6 +423,7 @@ int makeMove(int car)
 		// loading car
 		case 33:
 		{
+			// j=0;
 			// if there is someone in car and noone is in line, proceed
 			//if ((myPark.cars[car].passengers == NUM_SEATS) ||
 			//	 ((myPark.numInCarLine == 0) && myPark.cars[car].passengers))

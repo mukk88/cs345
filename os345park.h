@@ -51,5 +51,8 @@ typedef struct jpark
 int jurassicTask(int argc, char* argv[]);
 int jurassicDisplayTask(int argc, char* argv[]);
 int lostVisitorTask(int argc, char* argv[]);
+int carTask(int argc, char* argv[]);
+int driverTask(int argc, char* argv[]);
+int visitorTask(int argc, char* argv[]);
 
 #endif //__os345park_h__

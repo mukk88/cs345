@@ -44,9 +44,10 @@ extern PQueue readyQueue;
 //
 void semSignal(Semaphore* s)
 {
-	int i;
+	int i, taskOff;
 	// assert there is a semaphore and it is a legal type
 	assert("semSignal Error" && s && ((s->type == 0) || (s->type == 1)));
+	// printf("\nsize of semaphore queue in signal %s %d",s->name, s->q.size);
 
 	// check semaphore type
 	if (s->type == 0)
@@ -54,22 +55,23 @@ void semSignal(Semaphore* s)
 		// binary semaphore
 		// look through tasks for one suspended on this semaphore
 
-// temp:	// ?? temporary label
-		for (i=0; i<MAX_TASKS; i++)	// look for suspended task
+		// printf("\nblocked %d ready %d", s->q.size, readyQueue.size);
+
+
+		taskOff = deQueue(&s->q,-1);
+		if(taskOff >= 0) // taking off task 
 		{
-			if (tcb[i].event == s)
-			{
-				s->state = 0;				// clear semaphore
-				tcb[i].event = 0;			// clear event pointer
-				tcb[i].state = S_READY;	// unblock task
+			s->state = 0;
+			tcb[taskOff].event = 0;
+			tcb[taskOff].state = S_READY;
 
-				// ?? move task from blocked to ready queue
-				deQueue(&s->q, i);
-				enQueue(&readyQueue,i,tcb[i].priority);
+			enQueue(&readyQueue, taskOff, tcb[taskOff].priority);
+			// printf("\nblocked %d ready %d", s->q.size, readyQueue.size);
 
-				if (!superMode) swapTask();
-				return;
-			}
+
+
+			if (!superMode) swapTask();
+			return;
 		}
 		// nothing waiting on semaphore, go ahead and just signal
 		s->state = 1;						// nothing waiting, signal
@@ -82,21 +84,10 @@ void semSignal(Semaphore* s)
 		// ?? implement counting semaphore
 
 		if(++s->state <= 0 ){
-			for(i=0;i<MAX_TASKS;i++)
-			{
-				if(tcb[i].event==s)
-				{
-					s->state = 0;
-					tcb[i].event = 0;
-					tcb[i].state = S_READY;	// unblock task
-
-					deQueue(&s->q, i);
-					enQueue(&readyQueue,i,tcb[i].priority);
-
-					if(!superMode) swapTask();
-					return;
-				}
-			}
+			taskOff = deQueue(&s->q, -1);
+			tcb[taskOff].event = 0;
+			tcb[taskOff].state = S_READY;
+			enQueue(&readyQueue, taskOff, tcb[taskOff].priority);
 		}
 		if(!superMode) swapTask();
 		return;
@@ -118,14 +109,17 @@ int semWait(Semaphore* s)
 	assert("semWait Error" && s);												// assert semaphore
 	assert("semWait Error" && ((s->type == 0) || (s->type == 1)));	// assert legal type
 	assert("semWait Error" && !superMode);								// assert user mode
+	
+
 
 	// check semaphore type
 	if (s->type == 0)
 	{
+		// printf("\nsize of semaphore queue in wait! %s %d taskid = %d",s->name, s->q.size, curTask);
+
 		// binary semaphore
 		// if state is zero, then block task
 
-// temp:	// ?? temporary label
 		if (s->state == 0)
 		{
 			tcb[curTask].event = s;		// block task
@@ -196,11 +190,12 @@ int semTryLock(Semaphore* s)
 		// counting semaphore
 		// ?? implement counting semaphore
 
-		if(--s->state < 0)
+		if(s->state > 0)
 		{
-			return 0;
+			s->state--;
+			return 1;
 		}
-		return 1;
+		return 0;
 
 		// goto temp;
 	}

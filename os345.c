@@ -57,6 +57,9 @@ Semaphore* tics1sec;				// 1 second semaphore
 Semaphore* tics10thsec;				// 1/10 second semaphore
 Semaphore* tics10sec;
 
+Semaphore* deltaClockSem;
+
+
 // **********************************************************************
 // **********************************************************************
 // global system variables
@@ -119,8 +122,7 @@ int removeTask(PQueue tasks, int index)
 	for(i=index+1;i<tasks.size;i++){
 		swap(tasks,i);
 	}
-	tasks.size--;
-	return tasks.queue[tasks.size]->tid;
+	return tasks.queue[tasks.size-1]->tid;
 }
 
 int deQueue(PQueue* tasks, TID tid)
@@ -137,7 +139,10 @@ int deQueue(PQueue* tasks, TID tid)
 	}else{
 		for(i=0;i<tasks->size;i++){
 			if(tasks->queue[i]->tid == tid){
-				return removeTask(*tasks, i);
+				int removedTask;
+				removedTask = removeTask(*tasks,i);
+				(tasks->size)--;
+				return removedTask;
 			}
 		}
 	}
@@ -211,8 +216,9 @@ int main(int argc, char* argv[])
 	inBufferReady = createSemaphore("inBufferReady", BINARY, 0);
 	keyboard = createSemaphore("keyboard", BINARY, 1);
 	tics1sec = createSemaphore("tics1sec", BINARY, 0);
-	tics10sec = createSemaphore("tics10sec", BINARY, 1);
+	tics10sec = createSemaphore("tics10sec", COUNTING, 0);
 	tics10thsec = createSemaphore("tics10thsec", BINARY, 0);
+	deltaClockSem = createSemaphore("deltaClockSem", BINARY,1);
 
 	//?? ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -344,6 +350,7 @@ static int dispatcher()
 
 		case S_BLOCKED:
 		{
+			printf(":) :) :) BLOCKED :) :) :)");
 			break;
 		}
 

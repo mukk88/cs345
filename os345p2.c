@@ -39,6 +39,9 @@ extern jmp_buf reset_context;				// context of kernel stack
 
 extern Semaphore* tics10sec;
 
+extern PQueue readyQueue;
+
+
 // ***********************************************************************
 // project 2 functions and tasks
 
@@ -54,18 +57,32 @@ int P2_project2(int argc, char* argv[])
 	static char* s1Argv[] = {"signal1", "s1Sem"};
 	static char* s2Argv[] = {"signal2", "s2Sem"};
 	static char* aliveArgv[] = {"I'm Alive", "3"};
-	static char* tenArgv[] = {"ten second", "10"};
+	static char* tenArgv[] = {"ten second", "2"};
 
 	printf("\nStarting Project 2");
 
 
 	// PQueue test;
+	// PQueue test2;
 	// int i;
 	// initQueue(&test);
+	// initQueue(&test2);
 	// enQueue(&test, 2,5);
-	// enQueue(&test, 1,4);
-	// enQueue(&test, 4,10);
-	// enQueue(&test, 3,3);
+	// enQueue(&test, 3,5);
+	// enQueue(&test, 1,5);
+
+	// enQueue(&test2, 1,4);
+	// enQueue(&test2, 4,10);
+	// enQueue(&test2, 3,3);
+
+	// printf("\none %d\ntwo %d", test.size, test2.size);
+
+	// int temp = deQueue(&test2, 4);
+	// printf("\n%d", temp);
+	// enQueue(&test, temp, 10);
+
+	// printf("\none %d\ntwo %d", test.size, test2.size);
+
 
 	// for(i=test.size-1;i>=0;i--){
 	// 	printf("\ntid!!!! = %d", test.queue[i]->tid);
@@ -87,13 +104,65 @@ int P2_project2(int argc, char* argv[])
 
 	SWAP;
 
-	createTask("10secTask",
+	createTask("10secTask1",
 					tenSecTask,
 					HIGH_PRIORITY,
 					2,
 					tenArgv);
 
-	createTask("10secTask",
+	createTask("10secTask2",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
+
+
+	createTask("10secTask3",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
+
+	createTask("10secTask4",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
+
+
+	createTask("10secTask5",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
+
+	createTask("10secTask6",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
+
+
+	createTask("10secTask7",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
+
+	createTask("10secTask8",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
+
+
+	createTask("10secTask9",
+					tenSecTask,
+					HIGH_PRIORITY,
+					2,
+					tenArgv);
+
+	createTask("10secTask10",
 					tenSecTask,
 					HIGH_PRIORITY,
 					2,
@@ -132,28 +201,55 @@ int P2_project2(int argc, char* argv[])
 // list tasks command
 int P2_listTasks(int argc, char* argv[])
 {
-	int i;
+	int i,taskID;
 
 //	?? 1) List all tasks in all queues
 // ?? 2) Show the task stake (new, running, blocked, ready)
 // ?? 3) If blocked, indicate which semaphore
 
-	for (i=0; i<MAX_TASKS; i++)
+	for(i=readyQueue.size-1;i>=0;i--)
 	{
-		if (tcb[i].name)
-		{
-			printf("\n%4d/%-4d%20s%4d  ", i, tcb[i].parent,
-		  				tcb[i].name, tcb[i].priority);
-			if (tcb[i].signal & mySIGSTOP) my_printf("Paused");
-			else if (tcb[i].state == S_NEW) my_printf("New");
-			else if (tcb[i].state == S_READY) my_printf("Ready");
-			else if (tcb[i].state == S_RUNNING) my_printf("Running");
-			else if (tcb[i].state == S_BLOCKED) my_printf("Blocked    %s",
-		  				tcb[i].event->name);
-			else if (tcb[i].state == S_EXIT) my_printf("Exiting");
-			swapTask();
-		}
+		taskID = readyQueue.queue[i]->tid;
+		printf("\n%4d/%-4d%20s%4d  ", taskID, tcb[taskID].parent, tcb[taskID].name, tcb[taskID].priority);
+		if (tcb[taskID].signal & mySIGSTOP) my_printf("Paused");
+		else if (tcb[taskID].state == S_NEW) my_printf("New");
+		else if (tcb[taskID].state == S_READY) my_printf("Ready");
+		else if (tcb[taskID].state == S_RUNNING) my_printf("Running");
+		else if (tcb[taskID].state == S_BLOCKED) my_printf("Blocked    %s",
+	  				tcb[taskID].event->name);
+		else if (tcb[taskID].state == S_EXIT) my_printf("Exiting");
+		swapTask();
 	}
+	for(i=tics10sec->q.size-1;i>=0;i--)
+	{
+		taskID = tics10sec->q.queue[i]->tid;
+		printf("\n%4d/%-4d%20s%4d  ", taskID, tcb[taskID].parent, tcb[taskID].name, tcb[taskID].priority);
+		if (tcb[taskID].signal & mySIGSTOP) my_printf("Paused");
+		else if (tcb[taskID].state == S_NEW) my_printf("New");
+		else if (tcb[taskID].state == S_READY) my_printf("Ready");
+		else if (tcb[taskID].state == S_RUNNING) my_printf("Running");
+		else if (tcb[taskID].state == S_BLOCKED) my_printf("Blocked    %s",
+	  				tcb[taskID].event->name);
+		else if (tcb[taskID].state == S_EXIT) my_printf("Exiting");
+		swapTask();
+	}
+
+	// for (i=0; i<MAX_TASKS; i++)
+	// {
+	// 	if (tcb[i].name)
+	// 	{
+	// 		printf("\n%4d/%-4d%20s%4d  ", i, tcb[i].parent,
+	// 	  				tcb[i].name, tcb[i].priority);
+	// 		if (tcb[i].signal & mySIGSTOP) my_printf("Paused");
+	// 		else if (tcb[i].state == S_NEW) my_printf("New");
+	// 		else if (tcb[i].state == S_READY) my_printf("Ready");
+	// 		else if (tcb[i].state == S_RUNNING) my_printf("Running");
+	// 		else if (tcb[i].state == S_BLOCKED) my_printf("Blocked    %s",
+	// 	  				tcb[i].event->name);
+	// 		else if (tcb[i].state == S_EXIT) my_printf("Exiting");
+	// 		swapTask();
+	// 	}
+	// }
 	return 0;
 } // end P2_listTasks
 
@@ -307,8 +403,8 @@ int tenSecTask(int argc, char* argv[])
 	while(1)
 	{
 		SEM_WAIT(tics10sec);
-		printf("\nTime = %s", myTime(svtime));
-		swapTask();
+		printf("\nTime = %s task id = %d", myTime(svtime), curTask);
+		// swapTask();
 	}
 	return 0;
 }
