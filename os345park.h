@@ -29,6 +29,12 @@ typedef struct car
 	int passengers;				// # of passengers in car
 } CAR;
 
+typedef struct
+{
+	int time;
+	Semaphore* sem;
+} DeltaClock;
+
 typedef struct jpark
 {
 	int numOutsidePark;			// # outside of park
@@ -54,5 +60,6 @@ int lostVisitorTask(int argc, char* argv[]);
 int carTask(int argc, char* argv[]);
 int driverTask(int argc, char* argv[]);
 int visitorTask(int argc, char* argv[]);
+int timeTask(int argc, char* argv[]);
 
 #endif //__os345park_h__

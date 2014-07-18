@@ -37,119 +37,24 @@ extern Semaphore* rideOver[NUM_CARS];			// (signal) ride over
 
 extern Semaphore* deltaClockSem;
 
+extern int deltaClockCount;
+extern DeltaClock* deltaClock;
+extern int deltaClockSize;
+
 // ***********************************************************************
 // project 3 functions and tasks
 void CL3_project3(int, char**);
 void CL3_dc(int, char**);
-
-typedef struct
-{
-	int time;
-	Semaphore* sem;
-} DeltaClock;
-
-DeltaClock* deltaClock;
-int deltaClockSize;
-int deltaClockCount;
-
-void initDeltaClock()
-{
-	deltaClock = malloc(sizeof(DeltaClock) * 100);
-	deltaClockSize = 0;
-}
-
-void swapDeltaClock(int index)
-{
-	DeltaClock temp;
-	temp.time = deltaClock[index].time;
-	temp.sem = deltaClock[index].sem;
-
-	deltaClock[index].time = deltaClock[index-1].time;
-	deltaClock[index].sem = deltaClock[index-1].sem;
-
-	deltaClock[index-1].time = temp.time;
-	deltaClock[index-1].sem = temp.sem;
-}
-
-void adjustDeltaClock()
-{
-	int i;
-	for(i=deltaClockSize;i>0;i--)
-	{
-		if(deltaClock[i].time > deltaClock[i-1].time)
-		{
-			deltaClock[i].time -= deltaClock[i-1].time;
-			swapDeltaClock(i);
-
-		}else
-		{
-			deltaClock[i-1].time -= deltaClock[i].time;
-			break;
-		}
-	}
-}
-
-void addDeltaClock(int time, Semaphore* sem)
-{
-	int i;
-	deltaClock[deltaClockSize].sem = sem;
-	deltaClock[deltaClockSize].time = time;
-	adjustDeltaClock();
-	deltaClockSize++;
-}
-
-// display all pending events in the delta clock list
-void printDeltaClock(void)
-{
-	int i;
-	// printf("\n%s", "printing delta clock");
-	for (i=deltaClockSize-1; i>=0; i--)
-	{
-		printf("\n%4d%4d  %-20s", i, deltaClock[i].time, deltaClock[i].sem->name);
-	}
-	return;
-}
-
-extern Semaphore* tics10thsec;
-
-// ********************************************************************************************
-// display time every tics1sec
-int timeTask(int argc, char* argv[])
-{
-	int tempDeltaClockSize=0;
-	char svtime[64];						// ascii current time
-	while (1)
-	{
-		SEM_WAIT(tics10thsec)
-		SEM_WAIT(deltaClockSem)
-		if(deltaClockSize>0)
-		{
-			deltaClock[deltaClockSize-1].time--;
-			while(deltaClock[deltaClockSize-1].time<=0)
-			{
-				//signal that sem
-				deltaClockSize--;
-			}
-		}
-		if(tempDeltaClockSize!=deltaClockSize)
-		{
-			printDeltaClock();
-		}
-		tempDeltaClockSize = deltaClockSize;
-		// printf("\nTime = %s", myTime(svtime));
-		SEM_SIGNAL(deltaClockSem)
-	}
-	return 0;
-} // end timeTask
 
 // ***********************************************************************
 // ***********************************************************************
 // project3 command
 int P3_project3(int argc, char* argv[])
 {
-	// deltaClockCount = 0;
-	// initDeltaClock();
-	// static char* deltaArgv[] = {"deltaClockTask", "2"};
+	deltaClockCount = 0;
+	initDeltaClock();
+	static char* deltaArgv[] = {"deltaClockTask", "2"};
+	int NUM_OF_DRIVERS = 12;
 
 	// Semaphore* testMutex = createSemaphore("testMutex", BINARY, 1);
 	// addDeltaClock(10, testMutex);
@@ -157,11 +62,12 @@ int P3_project3(int argc, char* argv[])
 	// addDeltaClock(100, testMutex);
 	// addDeltaClock(120, testMutex);
 
-	// createTask("DeltaClockTask",
-	// 	timeTask,
-	// 	HIGH_PRIORITY,
-	// 	2,
-	// 	deltaArgv);
+	createTask("DeltaClockTask",
+		timeTask,
+		HIGH_PRIORITY,
+		2,
+		deltaArgv);
+
 	int i;
 	char buf[32];
 	char buf2[32];
@@ -181,7 +87,7 @@ int P3_project3(int argc, char* argv[])
 	while (!parkMutex) SWAP;
 	printf("\nStart Jurassic Park...");
 
-	for(i=0;i<NUM_DRIVERS;i++)
+	for(i=0;i<NUM_OF_DRIVERS;i++)
 	{	
 		sprintf(buf2, "%d", i);
 		sprintf(buf, "driver%d", i);
@@ -198,7 +104,7 @@ int P3_project3(int argc, char* argv[])
 	}
 
 
-	for(i=0;i<12;i++)
+	for(i=0;i<NUM_VISITORS;i++)
 	{	
 		sprintf(buf2, "%d", i);
 		sprintf(buf, "visitor%d", i);
@@ -208,6 +114,22 @@ int P3_project3(int argc, char* argv[])
 
 		createTask(buf,
 			visitorTask,
+			MED_PRIORITY,
+			1,
+			newArgv
+		);
+	}
+
+	for(i=0;i<NUM_CARS;i++)
+	{
+		sprintf(buf2, "%d", i);
+		sprintf(buf, "car%d", i);
+
+		newArgv[0] = buf2;
+
+
+		createTask(buf,
+			carTask,
 			MED_PRIORITY,
 			1,
 			newArgv

@@ -25,6 +25,105 @@
 #include "os345.h"
 #include "os345park.h"
 
+extern Semaphore* deltaClockSem;
+
+DeltaClock* deltaClock;
+int deltaClockSize;
+int deltaClockCount;
+
+void initDeltaClock()
+{
+	srand(time(NULL));
+	deltaClock = malloc(sizeof(DeltaClock) * 100);
+	deltaClockSize = 0;
+}
+
+void swapDeltaClock(int index)
+{
+	DeltaClock temp;
+	temp.time = deltaClock[index].time;
+	temp.sem = deltaClock[index].sem;
+
+	deltaClock[index].time = deltaClock[index-1].time;
+	deltaClock[index].sem = deltaClock[index-1].sem;
+
+	deltaClock[index-1].time = temp.time;
+	deltaClock[index-1].sem = temp.sem;
+}
+
+void adjustDeltaClock()
+{
+	int i;
+	for(i=deltaClockSize;i>0;i--)
+	{
+		if(deltaClock[i].time > deltaClock[i-1].time)
+		{
+			deltaClock[i].time -= deltaClock[i-1].time;
+			swapDeltaClock(i);
+
+		}else
+		{
+			deltaClock[i-1].time -= deltaClock[i].time;
+			break;
+		}
+	}
+}
+
+void addDeltaClock(int time, Semaphore* sem)
+{
+	int i;
+	deltaClock[deltaClockSize].sem = sem;
+	deltaClock[deltaClockSize].time = time;
+	adjustDeltaClock();
+	deltaClockSize++;
+}
+
+// display all pending events in the delta clock list
+void printDeltaClock(void)
+{
+	int i;
+	// printf("\n%s", "printing delta clock");
+	for (i=deltaClockSize-1; i>=0; i--)
+	{
+		printf("\n%4d%4d  %-20s", i, deltaClock[i].time, deltaClock[i].sem->name);
+	}
+	return;
+}
+
+extern Semaphore* tics10thsec;
+
+// ********************************************************************************************
+// display time every tics1sec
+int timeTask(int argc, char* argv[])
+{
+	int tempDeltaClockSize=0;
+	char svtime[64];						// ascii current time
+	while (1)
+	{
+		SEM_WAIT(tics10thsec)
+		SEM_WAIT(deltaClockSem)
+		if(deltaClockSize>0)
+		{
+			deltaClock[deltaClockSize-1].time--;
+			while(deltaClock[deltaClockSize-1].time<=0 && deltaClockSize>0)
+			{
+				//signal that sem
+				deltaClockSize--;
+				SEM_SIGNAL(deltaClock[deltaClockSize].sem);
+			}
+		}
+		// if(tempDeltaClockSize!=deltaClockSize)
+		// {
+		// 	printDeltaClock();
+		// }
+		// tempDeltaClockSize = deltaClockSize;
+		SEM_SIGNAL(deltaClockSem)
+	}
+	return 0;
+} // end timeTask
+
+
+
 JPARK myPark;
 Semaphore* parkMutex;						// mutex park variable access
 Semaphore* fillSeat[NUM_CARS];			// (signal) seat ready to fill
@@ -45,6 +144,11 @@ Semaphore* takeTicket;
 
 Semaphore* inMuseum;
 Semaphore* carLine;
+Semaphore* getPassenger;
+Semaphore* passengerSeated;
+Semaphore* seatTaken;
+
+Semaphore* inGift;
 
 extern TCB tcb[];							// task control block
 extern int curTask;
@@ -79,7 +183,7 @@ int jurassicTask(int argc, char* argv[])
 	}
 
 	// initialize other park variables
-	myPark.numOutsidePark = 12;						SWAP;			// # trying to enter park
+	myPark.numOutsidePark = NUM_SEATS*15;						SWAP;			// # trying to enter park
 	myPark.numTicketsAvailable = MAX_TICKETS;		SWAP;			// T=#
 	myPark.numInPark = 0;							SWAP;			// P=#
 	myPark.numRidesTaken = 0;						SWAP;			// S=#
@@ -105,7 +209,11 @@ int jurassicTask(int argc, char* argv[])
 
 	inMuseum = createSemaphore("inMuseum", COUNTING, MAX_IN_MUSEUM);
 	carLine = createSemaphore("carLine", COUNTING, 0);
+	getPassenger = createSemaphore("getPassenger", BINARY, 0);
+	passengerSeated = createSemaphore("passengerSeated", BINARY, 0);
+	seatTaken = createSemaphore("seatTaken", BINARY, 0);
 
+	inGift = createSemaphore("inGift", COUNTING, MAX_IN_GIFTSHOP);
 
 	// initialize communication semaphores
 	for (i=0; i < NUM_CARS; i++)
@@ -226,9 +334,9 @@ int jurassicTask(int argc, char* argv[])
 
 int carTask(int argc, char* argv[])
 {
-	printf("\n%s", "starting car task");
 	int i, carID;
 	carID  = atoi(argv[0]);
+	printf("\n%s%d", "starting car task", carID);
 	Semaphore* rideDone[NUM_SEATS];
 	Semaphore* driverDone;
 	while(1)
@@ -237,14 +345,16 @@ int carTask(int argc, char* argv[])
 		{
 			SEM_WAIT(fillSeat[carID]); // waiting for empty seat
 
+			
+			SEM_SIGNAL(getPassenger)
+			SEM_WAIT(seatTaken)
 			//giving back ticket
 			SEM_WAIT(parkMutex)
 			myPark.numTicketsAvailable++;
 			SEM_SIGNAL(parkMutex)
 			SEM_SIGNAL(tickets);
 
-			SEM_SIGNAL(getPassenger)
-			SEM_WAIT(seatTaken)
+			// printf("\n%s passenger %d", "getting here", i);
 
 			rideDone[i] = globalPassenger;
 
@@ -257,7 +367,7 @@ int carTask(int argc, char* argv[])
 				driverDone = globalDriver;
 				//going to be full after this, get driver first
 			}
-			myPark.cars[carID].passengers++;
+			// myPark.cars[carID].passengers++;
 			SEM_SIGNAL(seatFilled[carID]);
 		}
 		SEM_WAIT(rideOver[carID]);
@@ -273,17 +383,24 @@ int carTask(int argc, char* argv[])
 
 int visitorTask(int arc, char* argv[])
 {
-	//assume that they have got to the front of the line, only create 5
-	char buf[32];
-	Semaphore* visitorSem;
-	int visitorID = atoi(argv[0]);
-	sprintf(buf, "visitorSem%d", visitorID);
-	visitorSem = createSemaphore(buf, BINARY, 0);
+	int r;																	SWAP;
+	char buf[32];											 				SWAP;
+	Semaphore* visitorSem;													SWAP;
+	int visitorID = atoi(argv[0]);											SWAP;
+	sprintf(buf, "visitorSem%d", visitorID);								SWAP;
+	visitorSem = createSemaphore(buf, BINARY, 0);							SWAP;
+
+	SEM_WAIT(deltaClockSem)
+	r = rand() % 100;														SWAP;
+	addDeltaClock(r, visitorSem);
+	SEM_SIGNAL(deltaClockSem)
+	SEM_WAIT(visitorSem);
+
 
 	SEM_WAIT(parkMutex);
-	myPark.numOutsidePark--;
-	myPark.numInPark++;
-	myPark.numInTicketLine++;
+	myPark.numOutsidePark--;												SWAP;
+	myPark.numInPark++;														SWAP;
+	myPark.numInTicketLine++;												SWAP;
 	SEM_SIGNAL(parkMutex);
 
 	SEM_SIGNAL(needTicket);
@@ -296,6 +413,11 @@ int visitorTask(int arc, char* argv[])
 	SEM_SIGNAL(parkMutex)
 
 	//wait for a random amount of time in line before asking for musuem
+	SEM_WAIT(deltaClockSem)
+	r = rand() % 30;
+	addDeltaClock(r, visitorSem);
+	SEM_SIGNAL(deltaClockSem)
+	SEM_WAIT(visitorSem);
 
 	SEM_WAIT(inMuseum)
 
@@ -305,6 +427,11 @@ int visitorTask(int arc, char* argv[])
 	SEM_SIGNAL(parkMutex)
 
 	//wait for a random time in musuem
+	SEM_WAIT(deltaClockSem)
+	r = rand() % 30;
+	addDeltaClock(r, visitorSem);
+	SEM_SIGNAL(deltaClockSem)
+	SEM_WAIT(visitorSem);
 
 	SEM_SIGNAL(inMuseum) // out of musuem
 
@@ -320,25 +447,64 @@ int visitorTask(int arc, char* argv[])
 	SEM_SIGNAL(seatTaken)
 	SEM_WAIT(passengerSeated)
 
+	SEM_WAIT(parkMutex)
+	myPark.numInCarLine--;
+	myPark.numInCars++;
+	SEM_SIGNAL(parkMutex)
+
+
+	// printf("\n%s", "taking a ride");
+
+
 	SEM_WAIT(visitorSem)
 
-	printf("\n%s", "getting here");
+	SEM_WAIT(parkMutex)
+	myPark.numInCars--;
+	myPark.numInGiftLine++;
+	SEM_SIGNAL(parkMutex)
 
-	// SEM_SIGNAL(carLine);
+	// wait for random time in gift shop line
+	SEM_WAIT(deltaClockSem)
+	r = rand() % 30;
+	addDeltaClock(r, visitorSem);
+	SEM_SIGNAL(deltaClockSem)
+	SEM_WAIT(visitorSem);
 
-	// SEM_SIGNAL(fillSeat[0]);
 
+	SEM_WAIT(inGift)
 
+	SEM_WAIT(parkMutex)
+	myPark.numInGiftLine--;
+	myPark.numInGiftShop++;
+	SEM_SIGNAL(parkMutex)
 
-	// should be done when finish ride
-	// SEM_SIGNAL(tickets);
+	//wait for random time in gift shop
+	SEM_WAIT(deltaClockSem)
+	r = rand() % 30;
+	addDeltaClock(r, visitorSem);
+	SEM_SIGNAL(deltaClockSem)
+	SEM_WAIT(visitorSem);
+
+	SEM_SIGNAL(inGift);
+
+	SEM_WAIT(parkMutex)
+	myPark.numInGiftShop--;
+	myPark.numExitedPark++;
+	myPark.numInPark--;
+	SEM_SIGNAL(parkMutex)
+
+	while(1){
+		SWAP;
+	}
+
+	return 0;
 }
 
 int driverTask(int argc, char* argv[])
 {
 	char buf[32];
 	Semaphore* driverDone;
-	int driverID = atoi(argv[0]);
+	int driverID = atoi(argv[0]) % 4;
 	printf("Starting driver task with id = %d", driverID);
 	sprintf(buf, "driverDone%d", driverID);
 	driverDone = createSemaphore(buf, BINARY, 0);
@@ -348,19 +514,24 @@ int driverTask(int argc, char* argv[])
 		SEM_WAIT(wakeDriver);
 		if(semTryLock(needDriver))
 		{
+			myPark.drivers[driverID] = driverID+1;		SWAP
 			globalDriver = driverDone;
 			SEM_SIGNAL(driverReady);
 			SEM_WAIT(carReady)
 			SEM_WAIT(driverDone)
+			myPark.drivers[driverID] = 0;
 		}
 		else if(semTryLock(needTicket))
 		{
 			SEM_WAIT(tickets)
 
+			myPark.drivers[driverID] = -1;
+
 			SEM_WAIT(parkMutex)
 			myPark.numTicketsAvailable--;
 			SEM_SIGNAL(parkMutex)
 
+			myPark.drivers[driverID] = 0;
 			SEM_SIGNAL(takeTicket)
 		}
 		else
