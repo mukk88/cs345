@@ -70,8 +70,12 @@ int getFrame(int notme)
 //   / / / /     /                 / /       /
 //  / / / /     / 	             / /       /
 // F D R P - - f f|f f f f f f f f|S - - - p p p p|p p p p p p p p
+// 1 word / 4 bytes / 32 bits 
+// normal int is only 2 bytes
+//  there is 2^16 max memory, 2^10 frames,, each frame is 64 words = 256 bytes = 128 ints
+//  
 
-#define MMU_ENABLE	0
+#define MMU_ENABLE	1
 
 unsigned short int *getMemAdr(int va, int rwFlg)
 {
@@ -80,13 +84,16 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 	int upta, upte1, upte2;
 	int rptFrame, uptFrame;
 
-	rpta = 0x2400 + RPTI(va);
-	rpte1 = memory[rpta];
-	rpte2 = memory[rpta+1];
+	rpta = 0x2400 + RPTI(va); // address of the root page table
+	rpte1 = memory[rpta];		// get 2 words
+	rpte2 = memory[rpta+1];		// get another 2 words
 
 	// turn off virtual addressing for system RAM
 	if (va < 0x3000) return &memory[va];
 #if MMU_ENABLE
+
+	printf("using memory Management\n");
+
 	if (DEFINED(rpte1))
 	{
 		// defined
@@ -95,19 +102,19 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 	{
 		// fault
 		rptFrame = getFrame(-1);
-		rpte1 = SET_DEFINED(rptFrame);
-		if (PAGED(rpte2))
+		rpte1 = SET_DEFINED(rptFrame); // setting the frame bit in the user page table
+		if (PAGED(rpte2)) // it exists in swap space
 		{
 			accessPage(SWAPPAGE(rpte2), rptFrame, PAGE_READ);
 		}
 		else
 		{
-			memset(&memory[(rptFrame<<6)], 0, 128);
+			memset(&memory[(rptFrame<<6)], 0, 128); //sets 128 bytes to 0 why is it 128?
 		}
 	}
 
 
-	memory[rpta] = rpte1 = SET_REF(rpte1);
+	memory[rpta] = rpte1 = SET_REF(rpte1); // sets the referenced bit in the root page table
 	memory[rpta+1] = rpte2;
 
 	upta = (FRAME(rpte1)<<6) + UPTI(va);

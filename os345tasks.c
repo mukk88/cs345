@@ -26,6 +26,7 @@
 
 #include "os345.h"
 #include "os345signals.h"
+#include "os345lc3.h"
 //#include "os345config.h"
 
 
@@ -74,7 +75,6 @@ int createTask(char* name,						// task name
 			tcb[tid].argc = argc;			// argument count
 
 			// ?? malloc new argv parameters
-
 			char** newargv;
 			newargv = malloc(sizeof(char*) * argc);
 			int i;
@@ -99,6 +99,8 @@ int createTask(char* name,						// task name
 
 			// ?? may require inserting task into "ready" queue
 			enQueue(&readyQueue, tid, priority);
+
+			tcb[tid].RPT = LC3_RPT + ((tid) ? ((tid-1)<<6) : 0);
 
 			if (tid) swapTask();				// do context switch (if not cli)
 			return tid;							// return tcb index (curTask)
