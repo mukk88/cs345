@@ -57,25 +57,48 @@ int getFrame(int notme)
 	if (frame >=0) return frame;
 
 	// run clock
-
 	int i, j, upta, frameToRemove;
-	bool definedFrames = 0;
-	i = lastRpte;
+	// i = lastRpte;
+	i = 0x2400;
 	j = lastUpte;
 	while(1){
 		// for(i=0x2400;i<0x3000;i+=2){
 			// printf("%x", i);
 			if(DEFINED(memory[i])){
-				definedFrames = 0;
+
 				upta = FRAME(memory[i]);
 				upta = (upta<<6);
+
+				//double confirm
+				int k;
+				bool nothingInFrame = 1;
+				for(k=upta;k<upta+64;k+=2){
+					if(DEFINED(memory[k])){
+						nothingInFrame = 0;
+					}
+				}
+
+				if(nothingInFrame){
+					frameToRemove = FRAME(memory[i]);
+					// lastRpte=i+2;
+					memory[i] = CLEAR_DEFINED(memory[i]);
+					memory[i] = CLEAR_REF(memory[i]);
+
+					if(PAGED(memory[i+1])){
+						memory[i+1] = accessPage(SWAPPAGE(memory[i+1]), frameToRemove, PAGE_OLD_WRITE);
+					}else{
+						memory[i+1] = accessPage(0, frameToRemove, PAGE_NEW_WRITE);
+					}
+					memory[i+1] = SET_PAGED(memory[i+1]);
+					return frameToRemove;
+					// i can swap out this upt
+				}
 
 				// for(j=upta;j<upta+64;j+=2){
 				while(uptOffset < 64){
 					j = upta + uptOffset;
 				
 					if(DEFINED(memory[j])){
-						definedFrames = 1;
 						if(REFERENCED(memory[j])){
 							memory[j] = CLEAR_REF(memory[j]);
 						}else{
@@ -93,7 +116,6 @@ int getFrame(int notme)
 							memory[j+1] = SET_PAGED(memory[j+1]);
 							uptOffset+=2; // may not need this line
 							//need to loop through rest next time but if nothing dont remove this one
-							thisFrame = 1; // this upt should not be removed
 							return frameToRemove;
 						}
 					}
@@ -101,24 +123,6 @@ int getFrame(int notme)
 					uptOffset+=2;
 				}
 				uptOffset = 0;
-
-				if(!definedFrames && !thisFrame){
-					frameToRemove = FRAME(memory[i]);
-					lastRpte=i+2;
-					memory[i] = CLEAR_DEFINED(memory[i]);
-					memory[i] = CLEAR_REF(memory[i]);
-
-					if(PAGED(memory[i+1])){
-						memory[i+1] = accessPage(SWAPPAGE(memory[i+1]), frameToRemove, PAGE_OLD_WRITE);
-					}else{
-						memory[i+1] = accessPage(0, frameToRemove, PAGE_NEW_WRITE);
-					}
-					memory[i+1] = SET_PAGED(memory[i+1]);
-					return frameToRemove;
-					// i can swap out this upt
-				}
-				thisFrame = 0;
-
 				// }
 			}
 		i+=2;
