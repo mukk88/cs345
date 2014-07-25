@@ -51,6 +51,7 @@ bool firstTime;
 int lastRpte;
 int lastUpte;
 int uptOffset;
+bool thisFrame;
 // ***********************************************************************
 // ***********************************************************************
 // lc3 simulator task
@@ -430,6 +431,7 @@ void initLC3Memory(int startFrame, int endFrame)
   	lastRpte = 0x2400;
 	lastUpte = 0x3000;
 	uptOffset = 0;
+	thisFrame = 0;
 	return;
 } // end initLC3Memory
 

@@ -42,6 +42,7 @@ int pageWrites;						// page writes
 extern int lastRpte;
 extern int lastUpte;
 extern int uptOffset;
+extern bool thisFrame;
 
 extern bool firstTime;
 
@@ -83,15 +84,17 @@ int getFrame(int notme)
 							lastRpte = i;
 							memory[j] = CLEAR_DEFINED(memory[j]);
 							memory[j] = CLEAR_REF(memory[j]);
-							memory[j] = SWAPPAGE(memory[j]);
-							// what should the pnum variable be? does it matter?
-							// this cannot always be a new write
-							memory[j+1] = accessPage(0, frameToRemove, PAGE_NEW_WRITE);
+							// memory[j] = SWAPPAGE(memory[j]);
+							if(PAGED(memory[j+1])){
+								memory[j+1] = accessPage(SWAPPAGE(memory[j+1]), frameToRemove, PAGE_OLD_WRITE);
+							}else{
+								memory[j+1] = accessPage(0, frameToRemove, PAGE_NEW_WRITE);
+							}
 							memory[j+1] = SET_PAGED(memory[j+1]);
-							// write out the old data frame to physical memory
-							// printf("%x", frameToRemove);
+							uptOffset+=2; // may not need this line
+							//need to loop through rest next time but if nothing dont remove this one
+							thisFrame = 1; // this upt should not be removed
 							return frameToRemove;
-							//store the last place
 						}
 					}
 
@@ -99,9 +102,23 @@ int getFrame(int notme)
 				}
 				uptOffset = 0;
 
-				if(!definedFrames){
+				if(!definedFrames && !thisFrame){
+					frameToRemove = FRAME(memory[i]);
+					lastRpte=i+2;
+					memory[i] = CLEAR_DEFINED(memory[i]);
+					memory[i] = CLEAR_REF(memory[i]);
+
+					if(PAGED(memory[i+1])){
+						memory[i+1] = accessPage(SWAPPAGE(memory[i+1]), frameToRemove, PAGE_OLD_WRITE);
+					}else{
+						memory[i+1] = accessPage(0, frameToRemove, PAGE_NEW_WRITE);
+					}
+					memory[i+1] = SET_PAGED(memory[i+1]);
+					return frameToRemove;
 					// i can swap out this upt
 				}
+				thisFrame = 0;
+
 				// }
 			}
 		i+=2;
@@ -272,6 +289,7 @@ int accessPage(int pnum, int frame, int rwnFlg)
 
    if ((nextPage >= LC3_MAX_PAGE) || (pnum >= LC3_MAX_PAGE))
    {
+   	  printf("nextPage %d pageNum %d", nextPage, pnum);	
       printf("\nVirtual Memory Space Exceeded!  (%d)", LC3_MAX_PAGE);
       exit(-4);
    }
@@ -286,6 +304,7 @@ int accessPage(int pnum, int frame, int rwnFlg)
 
       case PAGE_NEW_WRITE:                   // new write (Drops thru to write old)
          pnum = nextPage++;
+   	  	// printf("nextPage %d pageNum %d", nextPage, pnum);	 
 
       case PAGE_OLD_WRITE:                   // write
          //printf("\n    (%d) Write frame %d (memory[%04x]) to page %d", p.PID, frame, frame<<6, pnum);
