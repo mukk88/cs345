@@ -60,7 +60,7 @@ int getFrame(int notme)
 	int i, j, upta, frameToRemove;
 	// i = lastRpte;
 	i = 0x2400;
-	j = lastUpte;
+	// j = lastUpte;
 	while(1){
 		// for(i=0x2400;i<0x3000;i+=2){
 			// printf("%x", i);
@@ -75,12 +75,13 @@ int getFrame(int notme)
 				for(k=upta;k<upta+64;k+=2){
 					if(DEFINED(memory[k])){
 						nothingInFrame = 0;
+						break;
 					}
 				}
 
-				if(nothingInFrame){
+				if(nothingInFrame && FRAME(memory[i])!=notme){
 					frameToRemove = FRAME(memory[i]);
-					// lastRpte=i+2;
+					// // lastRpte=i+2;
 					memory[i] = CLEAR_DEFINED(memory[i]);
 					memory[i] = CLEAR_REF(memory[i]);
 
@@ -90,6 +91,7 @@ int getFrame(int notme)
 						memory[i+1] = accessPage(0, frameToRemove, PAGE_NEW_WRITE);
 					}
 					memory[i+1] = SET_PAGED(memory[i+1]);
+					//possibly clear frame number
 					return frameToRemove;
 					// i can swap out this upt
 				}
