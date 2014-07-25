@@ -46,6 +46,11 @@ extern unsigned short int *getMemAdr(int va, int rwFlg);
 extern void setFrameTableBits(int flg, int sf, int ef);
 extern int accessPage(int pnum, int frame, int rwnFlg);
 
+bool firstTime;
+
+int lastRpte;
+int lastUpte;
+int uptOffset;
 // ***********************************************************************
 // ***********************************************************************
 // lc3 simulator task
@@ -420,6 +425,11 @@ void initLC3Memory(int startFrame, int endFrame)
    setFrameTableBits(0, startFrame, endFrame);
    // initialize paged memory
    accessPage(0, 0, PAGE_INIT);
+
+   	firstTime = 1;
+  	lastRpte = 0x2400;
+	lastUpte = 0x3000;
+	uptOffset = 0;
 	return;
 } // end initLC3Memory
 

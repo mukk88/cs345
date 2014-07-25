@@ -39,6 +39,12 @@ int nextPage;						// swap page size
 int pageReads;						// page reads
 int pageWrites;						// page writes
 
+extern int lastRpte;
+extern int lastUpte;
+extern int uptOffset;
+
+extern bool firstTime;
+
 int getFrame(int);
 int getAvailableFrame(void);
 
@@ -50,8 +56,62 @@ int getFrame(int notme)
 	if (frame >=0) return frame;
 
 	// run clock
-	printf("\nWe're toast!!!!!!!!!!!!");
 
+	int i, j, upta, frameToRemove;
+	bool definedFrames = 0;
+	i = lastRpte;
+	j = lastUpte;
+	while(1){
+		// for(i=0x2400;i<0x3000;i+=2){
+			// printf("%x", i);
+			if(DEFINED(memory[i])){
+				definedFrames = 0;
+				upta = FRAME(memory[i]);
+				upta = (upta<<6);
+
+				// for(j=upta;j<upta+64;j+=2){
+				while(uptOffset < 64){
+					j = upta + uptOffset;
+				
+					if(DEFINED(memory[j])){
+						definedFrames = 1;
+						if(REFERENCED(memory[j])){
+							memory[j] = CLEAR_REF(memory[j]);
+						}else{
+							//use this data frame
+							frameToRemove = FRAME(memory[j]);
+							lastRpte = i;
+							memory[j] = CLEAR_DEFINED(memory[j]);
+							memory[j] = CLEAR_REF(memory[j]);
+							memory[j] = SWAPPAGE(memory[j]);
+							// what should the pnum variable be? does it matter?
+							// this cannot always be a new write
+							memory[j+1] = accessPage(0, frameToRemove, PAGE_NEW_WRITE);
+							memory[j+1] = SET_PAGED(memory[j+1]);
+							// write out the old data frame to physical memory
+							// printf("%x", frameToRemove);
+							return frameToRemove;
+							//store the last place
+						}
+					}
+
+					uptOffset+=2;
+				}
+				uptOffset = 0;
+
+				if(!definedFrames){
+					// i can swap out this upt
+				}
+				// }
+			}
+		i+=2;
+		if(i==0x3000){
+			i=0x2400;
+		}
+		// }
+	}
+
+	// memory[(frameToRemove<<6)] 
 	return frame;
 }
 // **************************************************************************
@@ -72,8 +132,8 @@ int getFrame(int notme)
 // F D R P - - f f|f f f f f f f f|S - - - p p p p|p p p p p p p p
 // 1 word / 4 bytes / 32 bits 
 // normal int is only 2 bytes
-//  there is 2^16 max memory, 2^10 frames,, each frame is 64 words = 256 bytes = 128 ints
-//  
+//  there is 2^16 words max memory, 2^10 frames,, each frame is 64 words = 256 bytes = 128 words
+//  frame size is 2^6 words = 128 bytes = 64
 
 #define MMU_ENABLE	1
 
@@ -85,14 +145,14 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 	int rptFrame, uptFrame;
 
 	rpta = 0x2400 + RPTI(va); // address of the root page table
-	rpte1 = memory[rpta];		// get 2 words
-	rpte2 = memory[rpta+1];		// get another 2 words
+	rpte1 = memory[rpta];		// get a word
+	rpte2 = memory[rpta+1];		// get another word
 
 	// turn off virtual addressing for system RAM
 	if (va < 0x3000) return &memory[va];
 #if MMU_ENABLE
 
-	printf("using memory Management\n");
+	// printf("using memory Management\n");
 
 	if (DEFINED(rpte1))
 	{
@@ -109,7 +169,7 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 		}
 		else
 		{
-			memset(&memory[(rptFrame<<6)], 0, 128); //sets 128 bytes to 0 why is it 128?
+			memset(&memory[(rptFrame<<6)], 0, 128); //sets 128 bytes to 0 why is it 128? why bitshift by 6?
 		}
 	}
 
@@ -127,6 +187,7 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 	}
 	else
 	{
+
 		// fault
 		uptFrame = getFrame(FRAME(memory[rpta]));
 		upte1 = SET_DEFINED(uptFrame);
@@ -136,12 +197,12 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 		}
 		else
 		{
+			memset(&memory[(uptFrame<<6)], 0, 128); //sets 128 bytes to 0 why is it 128? why bitshift by 6?
 		}
 	}
 
 	memory[upta] = SET_REF(upte1);
 	memory[upta+1] = upte2;
-
 
 	return &memory[(FRAME(upte1)<<6) + FRAMEOFFSET(va)];
 #else
