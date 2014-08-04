@@ -218,6 +218,7 @@ int P4_dumpVirtualMem(int argc, char* argv[])	// dump virtual lc-3 memory
 int P4_virtualMemStats(int argc, char* argv[])
 {
 	double missRate;
+	memAccess = memHits + memPageFaults;
 	missRate = (memAccess)?(((double)memPageFaults)/(double)memAccess)*100.0:0;
 	printf("\nMemory accesses = %d", memAccess);
 	printf("\n           hits = %d", memHits);

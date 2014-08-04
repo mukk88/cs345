@@ -1812,6 +1812,8 @@ int fmsMount(char* fileName, void* ramDisk)
 //	Return 0 for success, otherwise, return the error number
 {
    FILE* fp;
+   printf("\n");
+   printf(fileName);
    fp = fopen(fileName, "rb");
    if (fp)
    {

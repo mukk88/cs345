@@ -162,6 +162,7 @@ int fmsDeleteFile(char* fileName)
 //
 int fmsOpenFile(char* fileName, int rwMode)
 {
+	// printf("\n%s\n %d", fileName, rwMode);
 	// ?? add code here
 	printf("\nfmsOpenFile Not Implemented");
 

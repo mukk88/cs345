@@ -43,6 +43,7 @@ extern int lastRpte;
 extern int lastUpte;
 extern int uptOffset;
 extern bool thisFrame;
+extern int curTask;
 
 extern bool firstTime;
 
@@ -58,8 +59,8 @@ int getFrame(int notme)
 
 	// run clock
 	int i, j, upta, frameToRemove;
-	// i = lastRpte;
-	i = 0x2400;
+	i = lastRpte;
+	// i = 0x2400;
 	// j = lastUpte;
 	while(1){
 		// for(i=0x2400;i<0x3000;i+=2){
@@ -81,16 +82,17 @@ int getFrame(int notme)
 
 				if(nothingInFrame && FRAME(memory[i])!=notme){
 					frameToRemove = FRAME(memory[i]);
-					// // lastRpte=i+2;
+					lastRpte=i+2;
 					memory[i] = CLEAR_DEFINED(memory[i]);
 					memory[i] = CLEAR_REF(memory[i]);
 
-					if(PAGED(memory[i+1])){
+					if(PAGED(memory[i+1]) && DIRTY(memory[i])){
 						memory[i+1] = accessPage(SWAPPAGE(memory[i+1]), frameToRemove, PAGE_OLD_WRITE);
 					}else{
 						memory[i+1] = accessPage(0, frameToRemove, PAGE_NEW_WRITE);
 					}
 					memory[i+1] = SET_PAGED(memory[i+1]);
+					memory[i] = SET_DIRTY(memory[i]);
 					//possibly clear frame number
 					return frameToRemove;
 					// i can swap out this upt
@@ -110,7 +112,7 @@ int getFrame(int notme)
 							memory[j] = CLEAR_DEFINED(memory[j]);
 							memory[j] = CLEAR_REF(memory[j]);
 							// memory[j] = SWAPPAGE(memory[j]);
-							if(PAGED(memory[j+1])){
+							if(PAGED(memory[j+1]) && DIRTY(memory[j])){
 								memory[j+1] = accessPage(SWAPPAGE(memory[j+1]), frameToRemove, PAGE_OLD_WRITE);
 							}else{
 								memory[j+1] = accessPage(0, frameToRemove, PAGE_NEW_WRITE);
@@ -167,7 +169,7 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 	int upta, upte1, upte2;
 	int rptFrame, uptFrame;
 
-	rpta = 0x2400 + RPTI(va); // address of the root page table
+	rpta = 0x2400 + RPTI(va) + 0x40*curTask; // address of the root page table
 	rpte1 = memory[rpta];		// get a word
 	rpte2 = memory[rpta+1];		// get another word
 
@@ -179,13 +181,16 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 
 	if (DEFINED(rpte1))
 	{
+		memHits++;
 		// defined
 	}
 	else
 	{
+		memPageFaults++;
 		// fault
 		rptFrame = getFrame(-1);
 		rpte1 = SET_DEFINED(rptFrame); // setting the frame bit in the user page table
+		rpte1 = SET_DIRTY(rpte1);
 		if (PAGED(rpte2)) // it exists in swap space
 		{
 			accessPage(SWAPPAGE(rpte2), rptFrame, PAGE_READ);
@@ -206,14 +211,16 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 
 	if (DEFINED(upte1))
 	{
+		memHits++;
 		// defined
 	}
 	else
 	{
-
+		memPageFaults++;
 		// fault
 		uptFrame = getFrame(FRAME(memory[rpta]));
 		upte1 = SET_DEFINED(uptFrame);
+		upte1 = SET_DIRTY(upte1);
 		if (PAGED(upte2))
 		{
 			accessPage(SWAPPAGE(upte2), uptFrame, PAGE_READ);
@@ -222,6 +229,12 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 		{
 			memset(&memory[(uptFrame<<6)], 0, 128); //sets 128 bytes to 0 why is it 128? why bitshift by 6?
 		}
+	}
+
+	if(rwFlg){
+		memory[rpta] = SET_DIRTY(memory[rpta]);
+	}else{
+
 	}
 
 	memory[upta] = SET_REF(upte1);
