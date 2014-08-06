@@ -83,6 +83,7 @@ char inBuffer[INBUF_SIZE+1];		// character input buffer
 int pollClock;						// current clock()
 int lastPollClock;					// last pollClock
 bool diskMounted;					// disk has been mounted
+int openFileCount;
 
 time_t oldTime1;					// old 1sec time
 time_t oldTime2;					// old 10sec time
@@ -430,6 +431,8 @@ static int initOS()
 	inBufIndx = 0;						// input pointer into input buffer
 	semaphoreList = 0;					// linked list of active semaphores
 	diskMounted = 0;					// disk has been mounted
+	openFileCount = 0;
+
 
 	// malloc ready queue
 	// rq = (int*)malloc(MAX_TASKS * sizeof(int));

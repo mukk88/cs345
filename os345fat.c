@@ -79,6 +79,8 @@ extern bool diskMounted;					// disk has been mounted
 extern TCB tcb[];							// task control block
 extern int curTask;							// current task #
 
+extern int openFileCount;
+
 
 // ***********************************************************************
 // ***********************************************************************
@@ -160,14 +162,73 @@ int fmsDeleteFile(char* fileName)
 // If successful, return a file descriptor that is used in calling subsequent file
 // handling functions; otherwise, return the error number.
 //
+
+int createFDEntry(FDEntry* fdEntry, DirEntry dirEntry, int rwMode){
+	int error;
+	strncpy(&(fdEntry->name), (char*)&(dirEntry.name), 8);
+	strncpy(&(fdEntry->extension), (char*)&(dirEntry.extension), 3);
+	fdEntry->attributes = dirEntry.attributes;
+	fdEntry->directoryCluster = CDIR;
+	fdEntry->startCluster = dirEntry.startCluster;
+	fdEntry->currentCluster = 0;
+	fdEntry->fileSize = rwMode==1 ? 0 : dirEntry.fileSize;
+	fdEntry->pid = curTask;
+	fdEntry->mode = rwMode;
+	fdEntry->flags = 0;
+	fdEntry->fileIndex = rwMode==2 ? dirEntry.fileSize : 0;
+
+	// i am not sure if i have to do this here..
+	short nextCluster;
+	fdEntry->currentCluster = fdEntry->startCluster;
+	while ((nextCluster = getFatEntry(fdEntry->currentCluster, FAT1)) != FAT_EOC)
+	         fdEntry->currentCluster = nextCluster;
+	if ((error = fmsReadSector(fdEntry->buffer,fdEntry->currentCluster))) return error;
+}
+
 int fmsOpenFile(char* fileName, int rwMode)
 {
 	int error = 0;
 	int index = 0;
+	int i;
 	char mask[20];
 	strcpy(mask, "*.*");
 	DirEntry dirEntry;
-	// printf("%s\n", dirPath);
+
+	if(!isValidFileName(fileName)){
+		return ERR50;
+	}
+
+	char name[13];
+	for(i=0;i<13;i++){
+		name[i] = ' ';
+	}
+	int nameCount = 0;
+	int extCount = 0;
+	bool isName = 1;
+	//checking name is valid
+	for(i=0;i<14;i++){
+		if(fileName[i]=='\0'){
+			break;
+		}
+		if(fileName[i]=='.'){
+			nameCount = 8;
+			isName = 0;
+			continue;
+		}
+		fileName[i] = toupper(fileName[i]);
+		if(isName){
+			if(nameCount >= 8){
+				return ERR50;
+			}
+			name[nameCount++] = fileName[i];
+		}else{
+			if(extCount >= 3){
+				return ERR50;
+			}
+			name[nameCount++] = fileName[i];
+			extCount++;
+		}
+	}
 	while (1)
 	{
 		error = fmsGetNextDirEntry(&index, mask, &dirEntry, CDIR);
@@ -179,24 +240,30 @@ int fmsOpenFile(char* fileName, int rwMode)
 		}
 
 		//check if file or dir
-		if(!(dirEntry.attributes & 0x10) && !(directory.attributes & 0x08) {
-			printf("\n%s filename %s", "not a directory or volume", dirEntry.name);
-			if(dirEntry.name == fileName){
+		if(!(dirEntry.attributes & 0x10) && !(dirEntry.attributes & 0x08) ){
+			bool sameName = 1;
+			printf("\n%s filename \n%s", "not a directory or volume", dirEntry.name);
+			for(i=0;i<12;i++){
+				if(name[i]!=dirEntry.name[i]){
+					sameName = 0;
+				}
+			}
+			if(sameName){
 				printf("\n%s", "found file!");
+				if(openFileCount>=32){
+					return ERR65;
+				}
+				// check if file is already open
+				//create FDEntry
+				FDEntry fdEntry;
+				if(error=createFDEntry(&fdEntry, dirEntry, rwMode)) return error;
+				OFTable[openFileCount] = fdEntry;
+				openFileCount++;
+				return openFileCount-1;
 			}
 		}
-		// printDirectoryEntry(&dirEntry);
-		// SWAP;
+		SWAP;
 	}
-
-	// printf("\n%s\n %d", fileName, rwMode);
-	// I am in this directory, the first thing is check if file name exists. 
-	//iterate through all directory entries in this dir
-
-
-	// ?? add code here
-	printf("\nfmsOpenFile Not Implemented");
-
 	return ERR61;
 } // end fmsOpenFile
 
