@@ -162,7 +162,38 @@ int fmsDeleteFile(char* fileName)
 //
 int fmsOpenFile(char* fileName, int rwMode)
 {
+	int error = 0;
+	int index = 0;
+	char mask[20];
+	strcpy(mask, "*.*");
+	DirEntry dirEntry;
+	// printf("%s\n", dirPath);
+	while (1)
+	{
+		error = fmsGetNextDirEntry(&index, mask, &dirEntry, CDIR);
+		if (error)
+		{
+			if (error != ERR67) fmsError(error);
+			if (error == ERR67) return ERR61;
+			break;
+		}
+
+		//check if file or dir
+		if(!(dirEntry.attributes & 0x10) && !(directory.attributes & 0x08) {
+			printf("\n%s filename %s", "not a directory or volume", dirEntry.name);
+			if(dirEntry.name == fileName){
+				printf("\n%s", "found file!");
+			}
+		}
+		// printDirectoryEntry(&dirEntry);
+		// SWAP;
+	}
+
 	// printf("\n%s\n %d", fileName, rwMode);
+	// I am in this directory, the first thing is check if file name exists. 
+	//iterate through all directory entries in this dir
+
+
 	// ?? add code here
 	printf("\nfmsOpenFile Not Implemented");
 
