@@ -398,6 +398,7 @@ int fmsWriteFile(int fileDescriptor, char* buffer, int nBytes)
 	int bytesLeft = nBytes;
 	while(bytesLeft){
 
+		//read into buffer for writing out later
 		if ((error = fmsReadSector(OFTable[fileDescriptor].buffer,C_2_S(OFTable[fileDescriptor].currentCluster)))) return error;
 
 		if(nBytes > BYTES_PER_SECTOR - sectorIndex){
