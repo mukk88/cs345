@@ -83,6 +83,7 @@ char inBuffer[INBUF_SIZE+1];		// character input buffer
 int pollClock;						// current clock()
 int lastPollClock;					// last pollClock
 bool diskMounted;					// disk has been mounted
+bool OFTableTaken[NFILES];
 int openFileCount;
 
 time_t oldTime1;					// old 1sec time
@@ -432,6 +433,9 @@ static int initOS()
 	semaphoreList = 0;					// linked list of active semaphores
 	diskMounted = 0;					// disk has been mounted
 	openFileCount = 0;
+	for(i=0;i<NFILES;i++){
+		OFTableTaken[i] = 0;
+	}
 
 
 	// malloc ready queue
