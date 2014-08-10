@@ -61,7 +61,7 @@ typedef struct
 	uint16	currentCluster;		// current cluster in buffer
 	uint32	fileSize;	   		// file size in bytes
 	int		pid;				// process who opened file
-	char	mode;				// access mode (read, read-only, write, append)
+	char	mode;				// access mode (read-only, write, append, readwrite)
 	char	flags;				// flags
 								//   x80 = file altered
 								//   x40 = buffer altered

@@ -1707,6 +1707,7 @@ int fmsGetNextDirEntry(int *dirNum, char* mask, DirEntry* dirEntry, int dir)
 		if (error = fmsReadSector(buffer, dirSector)) return error;
 
 		// find next matching directory entry
+		// printf("\n%s", "checking current cluster");
 		while(1)
 		{	// read directory entry
 			dirIndex = *dirNum % ENTRIES_PER_SECTOR;
@@ -1715,7 +1716,10 @@ int fmsGetNextDirEntry(int *dirNum, char* mask, DirEntry* dirEntry, int dir)
 			(*dirNum)++;                        		// prepare for next read
 			if (dirEntry->name[0] == 0xe5);     		// Deleted entry, go on...
 			else if (dirEntry->attributes == LONGNAME);
-			else if (fmsMask(mask, dirEntry->name, dirEntry->extension)) return 0;   // return if valid
+			else if (fmsMask(mask, dirEntry->name, dirEntry->extension)) {
+				// printf("\n%s!!!!!", dirEntry->name);
+				return 0;   // return if valid
+			}	
 			// break if sector boundary
 			if ((*dirNum % ENTRIES_PER_SECTOR) == 0) break;
 		}
