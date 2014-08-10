@@ -87,6 +87,7 @@ void updateDirEntry(FDEntry fdEntry, DirEntry* dirEntry){
 	// dirEntry->attributes = fdEntry.attributes;
 	dirEntry->startCluster = fdEntry.startCluster;
 	dirEntry->fileSize = fdEntry.fileSize;
+	printf("\n%d", fdEntry.fileSize);
 }
 
 // ***********************************************************************
@@ -97,7 +98,7 @@ void updateDirEntry(FDEntry fdEntry, DirEntry* dirEntry){
 //
 int fmsCloseFile(int fileDescriptor)
 {
-	int index = 0;
+	int index = 0, error;
 	DirEntry dirEntry;
 	char mask[20];
 	strcpy(mask, "*.*");
@@ -116,15 +117,48 @@ int fmsCloseFile(int fileDescriptor)
 	OFTable[fileDescriptor].buffer[0] = 0;
 
 	if(OFTable[fileDescriptor].flags & 0x80){
+		// printf("\ngetting here");
 		//file altered, find the directory with this name
 
 		// may have to copy out to the disk
-		
+		//find the directory cluster that has this dir entry
+		while(1)
+		{
+			error = fmsGetNextDirEntry(&index, mask, &dirEntry, CDIR);
+			if(error)
+			{
+				if (error != ERR67) fmsError(error);
+				break;
+			}
+		}
+		// printf("\n%d", index);
+		index--;
+		char buffer[BYTES_PER_SECTOR];
+		int dirIndex = index % ENTRIES_PER_SECTOR;
+		int dirSector, dirCluster = CDIR;
+		int loop = index/ENTRIES_PER_SECTOR;
+
+		if(CDIR){
+			while(loop--){
+				dirCluster = getFatEntry(dirCluster, FAT1);
+			}
+			dirSector = C_2_S(dirCluster);
+		}else{
+			dirSector = (index/ ENTRIES_PER_SECTOR) + BEG_ROOT_SECTOR;
+			if (dirSector >= BEG_DATA_SECTOR) return ERR67;
+		}
+
+		if (error = fmsReadSector(buffer, dirSector)) return error;
+
 		fmsGetDirEntry(OFTable[fileDescriptor].name, &dirEntry);
 		updateDirEntry(OFTable[fileDescriptor], &dirEntry);
+
+		memcpy(&buffer[dirIndex * sizeof(DirEntry)], &dirEntry, sizeof(DirEntry));
+		fmsWriteSector(buffer, dirSector);
+
 		//change date and time
 	}
-
+	openFileCount--;
 	OFTable[fileDescriptor].name[0] = 0;
 
 	return 0;
@@ -179,12 +213,13 @@ int fmsDefineFile(char* fileName, int attribute)
 			break;
 		}
 	}
+	// index--; this should not be used
 	// printf("\n%d", index);
 	// index should be the place to put it in now, might have to change by 1?
 	char buffer[BYTES_PER_SECTOR];
 	int dirIndex = index % ENTRIES_PER_SECTOR;
 	int dirSector, dirCluster = CDIR;
-	int loop = index/ENTRIES_PER_SECTOR;
+	int loop = (index-1)/ENTRIES_PER_SECTOR;
 
 	if(CDIR){
 		while(loop--){
@@ -269,6 +304,7 @@ int fmsDefineFile(char* fileName, int attribute)
 //
 int fmsDeleteFile(char* fileName)
 {
+	printf("\ndeleting a file");
 	char name[13];
 	char mask[20];
 	strcpy(mask, "*.*");
@@ -309,10 +345,10 @@ int fmsDeleteFile(char* fileName)
 		for(i=0;i<3;i++){
 			error = fmsGetNextDirEntry(&delIndex, mask, &emptyDirEnty, dirEntry.startCluster);
 		}
-		if(!error){
-			//there is something in the dir, cannot del
-			return ERR69;
-		}
+		// if(!error){
+		// 	//there is something in the dir, cannot del
+		// 	return ERR69;
+		// }
 	}
 
 	dirEntry.name[0] = 0xe5;
@@ -321,12 +357,13 @@ int fmsDeleteFile(char* fileName)
 
 	//clearing cluster chain
 	int curCluster = dirEntry.startCluster;
-	int nextCluster;
-	while((nextCluster = getFatEntry(curCluster, FAT1)) != FAT_EOC)
-	{
-		setFatEntry(curCluster, 0, FAT1);
-		curCluster = nextCluster;
-	}
+	int nextCluster = 0;
+	// while(getFatEntry(curCluster, FAT1)!= FAT_EOC)
+	// {
+	// 	nextCluster = getFatEntry(curCluster, FAT1);
+	// 	setFatEntry(curCluster, 0, FAT1);
+	// 	curCluster = nextCluster;
+	// }
 	setFatEntry(curCluster, 0, FAT1);
 	return 0;
 } // end fmsDeleteFile
@@ -368,6 +405,8 @@ void createFDEntry(FDEntry* fdEntry, DirEntry dirEntry, int rwMode){
 	fdEntry->mode = rwMode;
 	fdEntry->flags = 0;
 	fdEntry->fileIndex = (rwMode==2) ? dirEntry.fileSize : 0;
+
+	printf("\nFILESIZE = %d", dirEntry.fileSize);
 
 	// i am not sure if i have to do this here..
 	// short nextCluster;
@@ -442,7 +481,8 @@ int fmsOpenFile(char* fileName, int rwMode)
 			}
 			if(sameName){
 				// printf("\n%s", "found file!");
-				if(openFileCount>=32){
+				printf("\nFiles open: %d", openFileCount);
+				if(openFileCount>=33){
 					return ERR70;
 				}
 				// check if file is already open
@@ -503,7 +543,7 @@ int fmsReadFile(int fileDescriptor, char* buffer, int nBytes)
 	}
 	int fileIndex = OFTable[fileDescriptor].fileIndex;
 	int fileSize = OFTable[fileDescriptor].fileSize; 
-	// printf("\n%d  %d", fileIndex, fileSize);
+	printf("\nfile index is %d and file size is  %d", fileIndex, fileSize);
 	if(fileSize==fileIndex){
 		return ERR66;
 	}
@@ -532,6 +572,7 @@ int fmsReadFile(int fileDescriptor, char* buffer, int nBytes)
 				return ERR66;
 			}
 		}else{
+			// printf("\n%d", bytesLeft);
 			memcpy(buffer, &OFTable[fileDescriptor].buffer[sectorIndex], bytesLeft);
 			// printf("%s\n", buffer);
 			buffer+=bytesLeft;
@@ -556,10 +597,17 @@ int fmsReadFile(int fileDescriptor, char* buffer, int nBytes)
 //
 int fmsSeekFile(int fileDescriptor, int index)
 {
-	// ?? add code here
-	printf("\nfmsSeekFile Not Implemented");
-
-	return ERR63;
+	if(OFTable[fileDescriptor].name[0]==0){
+		return ERR63;
+	}
+	if(OFTable[fileDescriptor].mode==1 || OFTable[fileDescriptor].mode==2){
+		return ERR84;
+	}
+	if(OFTable[fileDescriptor].fileSize < index){
+		return ERR80;
+	}
+	OFTable[fileDescriptor].fileIndex = index;
+	return index;
 } // end fmsSeekFile
 
 
@@ -588,7 +636,8 @@ int nextFATindex(unsigned char* FAT){
 
 int fmsWriteFile(int fileDescriptor, char* buffer, int nBytes)
 {
-	printf("\n%s %d", buffer, nBytes);
+	// printf("\n%s %d", buffer, nBytes);
+	// printf("\n%s", "made it this far");
 	if(OFTable[fileDescriptor].name[0]==0){
 		return ERR63;
 	}
@@ -605,13 +654,13 @@ int fmsWriteFile(int fileDescriptor, char* buffer, int nBytes)
 
 	//init the currentcluster
 	if(!OFTable[fileDescriptor].startCluster){
-		OFTable[fileDescriptor].startCluster = getFatEntry(fatindex, FAT1);
+		OFTable[fileDescriptor].startCluster = nextFATindex(FAT1);
 		OFTable[fileDescriptor].currentCluster = OFTable[fileDescriptor].startCluster;
 		setFatEntry(OFTable[fileDescriptor].currentCluster, (unsigned short)FAT_EOC, FAT1);
 		setFatEntry(OFTable[fileDescriptor].currentCluster, (unsigned short)FAT_EOC, FAT2);
 	}
 
-	printf("clusters!\n%d\n%d", OFTable[fileDescriptor].currentCluster, OFTable[fileDescriptor].startCluster);
+	// printf("clusters!\n%d\n%d", OFTable[fileDescriptor].currentCluster, OFTable[fileDescriptor].startCluster);
 
 	while(bytesLeft){
 		//read into buffer for writing out later

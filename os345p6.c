@@ -1063,7 +1063,7 @@ int fmsTests(int test, bool debug)
 				try(fmsSeekFile(tFID[i],0));
 				if (debug) printf("\n   fmsSeekFile(tFID[%d], 0) = %d", i, error);
 			}
-			// read from numWords files
+			// // read from numWords files
 			rBuf[0] = 0;
 			for (i=0; i<numWords; i++)
 			{
@@ -1073,7 +1073,7 @@ int fmsTests(int test, bool debug)
 			printf("\n  %s", rBuf);
 
 			// close files
-			for (i=0; i<NFILES; i++)
+			for (i=0; i<NFILES-1; i++)
 			{
 				if (debug) printf("\n  fmsCloseFile(%d)", tFID[i]);
 				try(fmsCloseFile(tFID[i]));
@@ -1088,7 +1088,7 @@ int fmsTests(int test, bool debug)
 			int test2 = numFiles < NFILES ? numFiles-1 : NFILES-1;
 			printf("\nRunning Test 3...");
 			sprintf(buf2, "file%d.txt", test2);
-			for (i=0; i<numWords; i++)
+			for (i=0; i<1; i++)
 			{
 				sprintf(buf, "file%d.txt", i);
 				// open word file
@@ -1180,8 +1180,10 @@ int fmsTests(int test, bool debug)
 			try(fmsChangeDir(buf));
 			// create numFiles files in current directory
 			printf("\n  Define %d files...", numFiles);
+
 			for (i=0; i<numFiles; i++)
-			{	sprintf(buf1, "file%d.txt", i);
+			{	
+				sprintf(buf1, "file%d.txt", i);
 				if (debug) printf("\n  fmsDefineFile(\"%s\")", buf1);
 				try(fmsDefineFile(buf1, ARCHIVE));
 			}
@@ -1218,10 +1220,11 @@ int fmsTests(int test, bool debug)
 		{
 			// delete numFiles files
 			printf("\nRunning Test 6...");
-			printf("\n%d", numFiles);
-			// printf("\n  Delete %d files...", numFiles);
-			for (i=0; i<numFiles; i++)
-			{	sprintf(buf, "file%d.txt", i);
+			printf("\n  Delete %d files...", numFiles);	
+			for (i=0; i<numFiles-1; i++)
+			{	
+				printf("%d", i);
+				sprintf(buf, "file%d.txt", i);
 				if (debug) printf("\n  fmsDeleteFile(\"%s\")", buf);
 				try(fmsDeleteFile(buf));
 			}
@@ -1813,7 +1816,7 @@ int fmsMount(char* fileName, void* ramDisk)
 // This function loads a RAM disk image from a file.
 //	The parameter fileName is the file path name of the disk image.
 //	The parameter ramDisk is a pointer to a character array whose
-//    size is equal to a 1.4 mb floppy disk (2849 ´ 512 bytes).
+//    size is equal to a 1.4 mb floppy disk (2849 Â´ 512 bytes).
 //	Return 0 for success, otherwise, return the error number
 {
    FILE* fp;
@@ -1844,7 +1847,7 @@ int fmsUnMount(char* fileName, void* ramDisk)
 // This function unloads your Project 5 RAM disk image to file computer file.
 // The parameter fileName is the file path name of the disk image.
 // The pointer parameter ramDisk points to a character array whose size is equal to a 1.4
-// mb floppy disk (2849 ´ 512 bytes).
+// mb floppy disk (2849 Â´ 512 bytes).
 // Return 0 for success; otherwise, return the error number.
 {
 	diskMounted = 0;							// unmount disk
