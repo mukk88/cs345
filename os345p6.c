@@ -1218,7 +1218,8 @@ int fmsTests(int test, bool debug)
 		{
 			// delete numFiles files
 			printf("\nRunning Test 6...");
-			printf("\n  Delete %d files...", numFiles);
+			printf("\n%d", numFiles);
+			// printf("\n  Delete %d files...", numFiles);
 			for (i=0; i<numFiles; i++)
 			{	sprintf(buf, "file%d.txt", i);
 				if (debug) printf("\n  fmsDeleteFile(\"%s\")", buf);

@@ -130,7 +130,15 @@ int fmsCloseFile(int fileDescriptor)
 	return 0;
 } // end fmsCloseFile
 
-
+void clearDirName(DirEntry* entry){
+	int i;
+	for(i=0;i<8;i++){
+		entry->name[i] = ' ' ;
+	}
+	for(i=0;i<3;i++){
+		entry->extension[i] = ' ' ;
+	}
+}
 
 // ***********************************************************************
 // ***********************************************************************
@@ -150,13 +158,104 @@ int fmsCloseFile(int fileDescriptor)
 //
 int fmsDefineFile(char* fileName, int attribute)
 {
-	// check if already exists
+	char mask[20];
+	strcpy(mask, "*.*");
+	DirEntry dirEntry, createdDir;
+	int i, error, nameindex = 0, index =0;
+	if(isValidFileName(fileName)!=1) return ERR50;
+	error = fmsGetNextDirEntry(&index, fileName, &dirEntry, CDIR);
+	if(!error) return ERR60;
+
+	clearDirName(&createdDir);
+
+	//find the spot to put it in
+	index = 0;
+	while(1)
+	{
+		error = fmsGetNextDirEntry(&index, mask, &dirEntry, CDIR);
+		if(error)
+		{
+			if (error != ERR67) fmsError(error);
+			break;
+		}
+	}
+	// printf("\n%d", index);
+	// index should be the place to put it in now, might have to change by 1?
+	char buffer[BYTES_PER_SECTOR];
+	int dirIndex = index % ENTRIES_PER_SECTOR;
+	int dirSector, dirCluster = CDIR;
+	int loop = index/ENTRIES_PER_SECTOR;
+
+	if(CDIR){
+		while(loop--){
+			dirCluster = getFatEntry(dirCluster, FAT1);
+		}
+		dirSector = C_2_S(dirCluster);
+	}else{
+		dirSector = (index/ ENTRIES_PER_SECTOR) + BEG_ROOT_SECTOR;
+		if (dirSector >= BEG_DATA_SECTOR) return ERR67;
+	}
+
+	if (error = fmsReadSector(buffer, dirSector)) return error;
+
+	//fill up information about directory
+	bool ext = 0;
+	for(i=0;i<12;i++){
+		if(fileName[i]==0){
+			break;
+		}
+		if(fileName[i]=='.'){
+			nameindex = 0;
+			ext = 1;
+			continue;
+		}
+		if(!ext){
+			createdDir.name[nameindex++] = toupper(fileName[i]);
+		}else{
+			createdDir.extension[nameindex++] = toupper(fileName[i]);
+		}
+	}
+	createdDir.attributes = attribute;
+	createdDir.fileSize = 0;
+	//create the time and date here
+	
+	if(attribute==DIRECTORY){
+		int fatindex = nextFATindex(FAT1);
+		if(fatindex<0){
+			return fatindex;
+		}
+		// i am not sure if this fatindex is correct..	
+		createdDir.startCluster = fatindex;
+		setFatEntry(fatindex, FAT_EOC, FAT1);
+		setFatEntry(fatindex, FAT_EOC, FAT2);	
+		//create the . and ..
 
 
-	// ?? add code here
-	printf("\nfmsDefineFile Not Implemented");
+		DirEntry dotEntry;
+		DirEntry dotDotEntry;
+		clearDirName(&dotEntry);
+		clearDirName(&dotDotEntry);
+		char newBuffer[BYTES_PER_SECTOR];
+		dotEntry.name[0] = '.';
+		for(i=0;i<2;i++) dotDotEntry.name[i] = '.';
+		dotEntry.attributes = attribute;
+		dotDotEntry.attributes = attribute;
+		dotEntry.fileSize = 0;
+		dotDotEntry.fileSize = 0;
+		dotEntry.startCluster = fatindex;
+		dotDotEntry.startCluster = CDIR;
 
-	return ERR72;
+		if (error = fmsReadSector(newBuffer,C_2_S(fatindex))) return error;
+		memcpy(&newBuffer[0 * sizeof(DirEntry)], &dotEntry, sizeof(DirEntry));
+		memcpy(&newBuffer[1 * sizeof(DirEntry)], &dotDotEntry, sizeof(DirEntry));
+		fmsWriteSector(newBuffer, C_2_S(fatindex));
+
+	}else{
+		createdDir.startCluster = 0;
+	}
+	memcpy(&buffer[dirIndex * sizeof(DirEntry)], &createdDir, sizeof(DirEntry));
+	fmsWriteSector(buffer, dirSector);
+	return 0;
 } // end fmsDefineFile
 
 
