@@ -63,7 +63,7 @@ bool thisFrame;
 int lc3Task(int argc, char* argv[])
 {
 	int DR, oldpc, ir;   					// local variables
-   int i;
+    int i;
 
 	int LC3_REGS[8];							// General purpose registers
 	int LC3_CC = 0x02;						// NZP condition codes
@@ -81,6 +81,7 @@ int lc3Task(int argc, char* argv[])
    // Execute LC3 program
 	while(1)
 	{
+		// printf("\n%s", "im alive");	
 		oldpc = LC3_PC;					   // save old pc for debug message
 
 		ir = getMemoryData(LC3_PC);		// load ir and increment pc
@@ -199,6 +200,11 @@ int lc3Task(int argc, char* argv[])
 			{
 				int trapv = getMemoryData(GET_TRAPVECT8);		// access trap vector
 				getMemoryData(trapv);							// access system routine
+
+				// printf("\n%s","bonkers");
+				// printf("\n%x",GET_TRAPVECT8);
+
+
 				switch(GET_TRAPVECT8)
 				{  int tmp, string_address;
 					case LC3_GETID:
